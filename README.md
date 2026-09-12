@@ -28,7 +28,10 @@ pytest tests/test_score4window_strategy.py -q
 
 ## Backtest
 
+Uses the official Freqtrade backtesting engine (config defaults to Gate.io for
+environments where Binance is geo-restricted):
+
 ```bash
-freqtrade download-data -c user_data/config.json -d user_data/data --timeframe 1d --days 365 -p BTC/USDT
-freqtrade backtesting -c user_data/config.json --strategy Score4WindowStrategy --timerange 20240101-
+freqtrade download-data -c user_data/config.json --userdir user_data --timeframe 1d --days 200 -p BTC/USDT
+freqtrade backtesting -c user_data/config.json --userdir user_data --strategy Score4WindowStrategy --timerange 20260301-20260901 -i 1d
 ```
