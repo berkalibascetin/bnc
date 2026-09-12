@@ -21,6 +21,8 @@ import talib.abstract as ta
 
 from freqtrade.strategy import IStrategy, IntParameter, DecimalParameter
 
+from score4window_scoring import apply_score4window_scores
+
 
 class Score4WindowStrategy(IStrategy):
     """
@@ -144,10 +146,36 @@ class Score4WindowStrategy(IStrategy):
             needed.append(int(self.fib_lookback.value) + 1)
         self.startup_candle_count = max(needed)
 
+        # Observation-only score scan. Never places orders / never flips dry_run.
+        # Force executes on first bot_loop_start (after OHLCV is available).
+        mode = str((self.config or {}).get("score_scan", "off")).lower()
+        self._score_scan_force_pending = mode == "force"
+
+    def bot_loop_start(self, current_time: datetime, **kwargs) -> None:
+        """Observation score scan — does not create or cancel orders."""
+        try:
+            mode = str((self.config or {}).get("score_scan", "off")).lower()
+            if mode == "off":
+                return
+            from score_scan.engine import run_score_scan
+
+            if mode == "force" and getattr(self, "_score_scan_force_pending", False):
+                run_score_scan(self, self.config or {}, mode="force", now=current_time)
+                self._score_scan_force_pending = False
+            elif mode == "hourly":
+                run_score_scan(self, self.config or {}, mode="hourly", now=current_time)
+        except Exception:
+            import logging
+            logging.getLogger(__name__).exception(
+                "score_scan: scan failed (continuing dry-run)"
+            )
+
     @staticmethod
     def _window_score(dataframe: DataFrame, lookback: int) -> Series:
-        historical = dataframe["close"].shift(lookback)
-        return np.sign(dataframe["close"] - historical)
+        # Delegate to shared authoritative scorer (kept for callers/tests).
+        from score4window_scoring import window_score
+
+        return window_score(dataframe["close"], lookback)
 
     @staticmethod
     def calc_position_size_pct(
@@ -177,15 +205,13 @@ class Score4WindowStrategy(IStrategy):
         w3 = int(self.window_1m.value)
         w4 = int(self.window_2m.value)
 
-        dataframe["score_1w"] = self._window_score(dataframe, w1)
-        dataframe["score_2w"] = self._window_score(dataframe, w2)
-        dataframe["score_1m"] = self._window_score(dataframe, w3)
-        dataframe["score_2m"] = self._window_score(dataframe, w4)
-        dataframe["total_score"] = (
-            dataframe["score_1w"]
-            + dataframe["score_2w"]
-            + dataframe["score_1m"]
-            + dataframe["score_2m"]
+        # Authoritative score math (shared with score_scan).
+        dataframe = apply_score4window_scores(
+            dataframe,
+            window_1w=w1,
+            window_2w=w2,
+            window_1m=w3,
+            window_2m=w4,
         )
 
         # Volatility for position sizing (always computed)

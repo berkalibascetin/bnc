@@ -28,6 +28,26 @@ stake    = wallet * size_pct / 100
 
 Example: score=2, risk=3, ATR%=4 → invest **1.5%** of wallet.
 
+## Score scan (observation only)
+
+Query the **same** Score4Window score across the whitelist without placing
+orders or changing entry/exit/risk:
+
+```bash
+# Drop-in wrapper around freqtrade that registers --score-scan
+PYTHONPATH=. python -m score_scan trade -c user_data/config.json \
+  --strategy Score4WindowStrategy --score-scan force
+
+# Modes: off (default) | force (once after data is ready) | hourly (max 1/hour)
+PYTHONPATH=. python -m score_scan trade --help   # shows --score-scan
+```
+
+- Requires `dry_run=true` (scanner refuses to run otherwise).
+- Does **not** open trades, alter whitelist, risk_pct, timeframe, or dry_run.
+- Writes `reports/score_scan_latest.json` and `reports/score_scan_latest.md`.
+- Score math lives in `user_data/strategies/score4window_scoring.py` and is shared
+  by the strategy and the scanner.
+
 ## Setup
 
 ```bash

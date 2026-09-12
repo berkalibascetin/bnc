@@ -16,5 +16,8 @@ user_data/data/**/*.zip
 !user_data/data/.gitkeep
 user_data/strategies/*.json
 user_data/filter_results/
+reports/score_scan_latest.json
+reports/score_scan_latest.md
+reports/score_scans/
 tradesv3*.sqlite*
 *.sqlite-journal
