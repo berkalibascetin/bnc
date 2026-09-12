@@ -141,14 +141,18 @@ class Score4WindowStrategy(IStrategy):
     def populate_entry_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         threshold = int(self.entry_score_threshold.value)
 
-        dataframe.loc[
-            (
-                (dataframe["total_score"] >= threshold)
-                & (dataframe["total_score"].notna())
-                & (dataframe["volume"] > 0)
-            ),
-            "enter_long",
-        ] = 1
+        entry_cond = (
+            (dataframe["total_score"] >= threshold)
+            & (dataframe["total_score"].notna())
+            & (dataframe["volume"] > 0)
+        )
+        dataframe.loc[entry_cond, "enter_long"] = 1
+        # Tag entries with the integer score for baseline analysis only.
+        # Does not change whether a candle enters — only labels why.
+        dataframe.loc[entry_cond, "enter_tag"] = (
+            "score_"
+            + dataframe.loc[entry_cond, "total_score"].fillna(0).astype(int).astype(str)
+        )
 
         return dataframe
 

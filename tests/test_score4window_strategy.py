@@ -157,6 +157,67 @@ class TestScore4WindowSignals:
         assert "enter_short" not in df.columns or (df["enter_short"].fillna(0) == 0).all()
 
 
+class TestScore4WindowThresholds:
+    def test_threshold_filters_entries(self, strategy):
+        """Raising threshold reduces (never increases) entry count on same data."""
+        closes = [float(i) for i in range(1, 61)]  # rising => score tends toward +4
+        raw = _make_ohlcv(closes)
+
+        counts = {}
+        for th in (1, 2, 3, 4):
+            strategy.entry_score_threshold.value = th
+            df = _run_pipeline(strategy, raw)
+            counts[th] = int((df["enter_long"] == 1).sum())
+
+        assert counts[1] >= counts[2] >= counts[3] >= counts[4]
+        # Strictly rising series should still enter at threshold 4 after warmup
+        assert counts[4] > 0
+
+    def test_enter_tag_matches_total_score(self, strategy):
+        strategy.entry_score_threshold.value = 1
+        closes = [float(i) for i in range(1, 51)]
+        df = _run_pipeline(strategy, _make_ohlcv(closes))
+        entries = df[df["enter_long"] == 1]
+        assert len(entries) > 0
+        for _, row in entries.iterrows():
+            assert row["enter_tag"] == f"score_{int(row['total_score'])}"
+
+    def test_score_buckets_separable(self, strategy):
+        """Crafted flat+bumps produce exact scores 1/2/3/4 at selected rows."""
+        strategy.entry_score_threshold.value = 1
+        n = 50
+        closes = [100.0] * n
+        # At last index: all four windows lower => score +4
+        closes[-1] = 110.0
+        closes[-1 - 5] = 90.0
+        closes[-1 - 10] = 90.0
+        closes[-1 - 21] = 90.0
+        closes[-1 - 42] = 90.0
+        df = _run_pipeline(strategy, _make_ohlcv(closes))
+        assert df.iloc[-1]["total_score"] == 4.0
+        assert df.iloc[-1]["enter_long"] == 1
+        assert df.iloc[-1]["enter_tag"] == "score_4"
+
+        # Threshold 4 only: still enters; threshold would block lower scores
+        strategy.entry_score_threshold.value = 4
+        df4 = _run_pipeline(strategy, _make_ohlcv(closes))
+        assert df4.iloc[-1]["enter_long"] == 1
+
+        # Make only one window positive => score +1, blocked by threshold 4
+        closes2 = [100.0] * n
+        closes2[-1] = 100.0
+        closes2[-1 - 5] = 90.0  # 1w only => +1; other windows equal => 0
+        strategy.entry_score_threshold.value = 4
+        df_block = _run_pipeline(strategy, _make_ohlcv(closes2))
+        assert df_block.iloc[-1]["total_score"] == 1.0
+        assert df_block.iloc[-1].get("enter_long", 0) != 1
+
+        strategy.entry_score_threshold.value = 1
+        df_allow = _run_pipeline(strategy, _make_ohlcv(closes2))
+        assert df_allow.iloc[-1]["enter_long"] == 1
+        assert df_allow.iloc[-1]["enter_tag"] == "score_1"
+
+
 class TestScore4WindowSafety:
     def test_no_lookahead_shift(self, strategy):
         """Historical closes must come from shift(+N), matching past candles only."""

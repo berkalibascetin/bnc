@@ -35,3 +35,23 @@ environments where Binance is geo-restricted):
 freqtrade download-data -c user_data/config.json --userdir user_data --timeframe 1d --days 200 -p BTC/USDT
 freqtrade backtesting -c user_data/config.json --userdir user_data --strategy Score4WindowStrategy --timerange 20260301-20260901 -i 1d
 ```
+
+## Baseline threshold study (no hyperopt)
+
+Compare `entry_score_threshold` ∈ {1,2,3,4} on the same timerange without
+permanently changing strategy defaults. Also reports trade outcomes by
+`enter_tag` (`score_1`…`score_4`) from a threshold=1 run, plus a small liquid
+USDT multi-pair sample (BTC/ETH/SOL/BNB/XRP).
+
+```bash
+# downloads data, runs threshold grid + multi-pair, writes reports/score4window_baseline_report.json
+python scripts/run_score4window_baseline.py
+
+# or reuse local OHLCV:
+python scripts/run_score4window_baseline.py --skip-download
+```
+
+Multi-pair config: `user_data/config_baseline.json`  
+Timerange: `20260301-20260901` · Timeframe: `1d`
+
+This stage does **not** add Fibonacci, volatility, volume, VWAP, breakout, or news filters.
