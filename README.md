@@ -55,3 +55,32 @@ Multi-pair config: `user_data/config_baseline.json`
 Timerange: `20260301-20260901` · Timeframe: `1d`
 
 This stage does **not** add Fibonacci, volatility, volume, VWAP, breakout, or news filters.
+
+## Optional confirmation filters (OFF by default)
+
+Filters are implemented in `Score4WindowStrategy` but **all default to OFF**,
+so the live/default strategy remains the original 4-window score baseline.
+
+Enable one filter at a time via `user_data/strategies/Score4WindowStrategy.json`
+(or the evaluation script) for A/B tests:
+
+- `enable_volume_filter`
+- `enable_momentum_filter`
+- `enable_breakout_filter`
+- `enable_retest_filter`
+- `enable_volatility_filter`
+- `enable_fibonacci_filter`
+
+### Filter evaluation
+
+```bash
+# uses Gate.io 1d data for BTC/ETH/SOL/BNB/XRP across 3 periods
+python scripts/run_score4window_filter_eval.py
+```
+
+Report: `reports/score4window_filter_evaluation.json`
+
+First-pass result: **no filter is recommended for production**. Volume/breakout
+helped in 2024-09→2025-09 but failed in 2025-09→2026-09 (regime sensitivity /
+overfit risk). Keep baseline score-only entry until a filter wins on all periods.
+

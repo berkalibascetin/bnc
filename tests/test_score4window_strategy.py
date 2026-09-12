@@ -263,3 +263,63 @@ class TestScore4WindowSafety:
         assert strategy.INTERFACE_VERSION == 3
         assert strategy.STRATEGY_ID == "SCORE_4WINDOW_V1"
         assert strategy.can_short is False
+
+
+class TestScore4WindowOptionalFilters:
+    def test_filters_default_off_preserves_baseline(self, strategy):
+        """With all filters disabled, entry set matches score-only baseline."""
+        assert strategy.enable_volume_filter.value == 0
+        assert strategy.enable_momentum_filter.value == 0
+        assert strategy.enable_breakout_filter.value == 0
+        assert strategy.enable_retest_filter.value == 0
+        assert strategy.enable_volatility_filter.value == 0
+        assert strategy.enable_fibonacci_filter.value == 0
+
+        closes = [float(i) for i in range(1, 80)]
+        df = _run_pipeline(strategy, _make_ohlcv(closes))
+        score_only = (
+            (df["total_score"] >= strategy.entry_score_threshold.value)
+            & df["total_score"].notna()
+            & (df["volume"] > 0)
+        )
+        entered = df["enter_long"].fillna(0) == 1
+        assert entered.equals(score_only.fillna(False))
+
+    def test_volume_filter_reduces_or_keeps_entries(self, strategy):
+        closes = [float(i) for i in range(1, 80)]
+        raw = _make_ohlcv(closes)
+        # Spike volume on only half of late candles
+        raw.loc[40::2, "volume"] = 5000.0
+        raw.loc[41::2, "volume"] = 100.0
+
+        strategy.enable_volume_filter.value = 0
+        base = _run_pipeline(strategy, raw)
+        base_n = int((base["enter_long"] == 1).sum())
+
+        strategy.enable_volume_filter.value = 1
+        filt = _run_pipeline(strategy, raw)
+        filt_n = int((filt["enter_long"] == 1).sum())
+        assert filt_n <= base_n
+        strategy.enable_volume_filter.value = 0
+
+    def test_each_filter_is_lookahead_safe(self, strategy):
+        """Mutating a future candle must not change past filter flags."""
+        closes = [float(i) for i in range(1, 100)]
+        raw = _make_ohlcv(closes)
+        df = _run_pipeline(strategy, raw)
+        mutated = raw.copy()
+        mutated.loc[98, "close"] = 99999.0
+        mutated.loc[98, "high"] = 100000.0
+        mutated.loc[98, "volume"] = 1e9
+        df2 = _run_pipeline(strategy, mutated)
+        past = 80
+        for col in (
+            "filt_volume",
+            "filt_momentum",
+            "filt_breakout",
+            "filt_retest",
+            "filt_volatility",
+            "filt_fibonacci",
+            "total_score",
+        ):
+            assert df.loc[past, col] == df2.loc[past, col]
