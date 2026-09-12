@@ -16,3 +16,6 @@ user_data/data/**/*.zip
 !user_data/data/.gitkeep
 user_data/strategies/*.json
 user_data/filter_results/
+user_data/suite_results/
+tradesv3*.sqlite*
+*.sqlite-journal

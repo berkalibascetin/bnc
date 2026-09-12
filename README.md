@@ -23,10 +23,10 @@ stake    = wallet * size_pct / 100
 ```
 
 - `atr_pct` = ATR(14) / close * 100 (computed by the strategy)
-- `risk_pct` default = **2**
+- `risk_pct` default = **3**
 - Cap: `max_position_pct` default = 25 (safety)
 
-Example: score=2, risk=2, ATR%=4 → invest **1%** of wallet.
+Example: score=2, risk=3, ATR%=4 → invest **1.5%** of wallet.
 
 ## Setup
 
@@ -99,3 +99,36 @@ First-pass result: **no filter is recommended for production**. Volume/breakout
 helped in 2024-09→2025-09 but failed in 2025-09→2026-09 (regime sensitivity /
 overfit risk). Keep baseline score-only entry until a filter wins on all periods.
 
+## Binance dry-run universe (~100 pairs)
+
+Dry-run config scans a curated ~100 Binance SPOT USDT universe. This expands
+**search space only**; strategy logic is unchanged.
+
+- `risk_pct=3`, `timeframe=1d`, `max_open_trades=5`, `dry_run=true`
+- Universe artifacts: `user_data/universes/`
+- Docs: `docs/binance_universe_methodology.md`, `docs/binance_universe_data_availability.md`, `docs/binance_universe_validation_report.md`
+
+```bash
+python scripts/build_binance_universe.py
+python scripts/download_binance_universe_data.py --days 800 --min-candles 60
+freqtrade trade -c user_data/config.json --userdir user_data --strategy Score4WindowStrategy
+```
+
+Current-membership universe is for dry-run observation. Historical claims need
+date-aware membership (survivorship bias).
+
+## Dry-run observability
+
+Generate a read-only observation report from config + dry-run DB + logs:
+
+```bash
+python -m dry_run_observability report
+```
+
+Outputs:
+- `reports/dry_run_report.json`
+- `reports/dry_run_report.md`
+
+Docs: `docs/dry_run_observability.md`
+
+This does **not** change strategy logic, risk settings, or `dry_run`.
