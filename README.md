@@ -99,3 +99,20 @@ First-pass result: **no filter is recommended for production**. Volume/breakout
 helped in 2024-09→2025-09 but failed in 2025-09→2026-09 (regime sensitivity /
 overfit risk). Keep baseline score-only entry until a filter wins on all periods.
 
+## Binance dry-run universe (~100 pairs)
+
+Dry-run config scans a curated ~100 Binance SPOT USDT universe. This expands
+**search space only**; strategy logic is unchanged.
+
+- `risk_pct=3`, `timeframe=1d`, `max_open_trades=5`, `dry_run=true`
+- Universe artifacts: `user_data/universes/`
+- Docs: `docs/binance_universe_methodology.md`, `docs/binance_universe_data_availability.md`, `docs/binance_universe_validation_report.md`
+
+```bash
+python scripts/build_binance_universe.py
+python scripts/download_binance_universe_data.py --days 800 --min-candles 60
+freqtrade trade -c user_data/config.json --userdir user_data --strategy Score4WindowStrategy
+```
+
+Current-membership universe is for dry-run observation. Historical claims need
+date-aware membership (survivorship bias).
