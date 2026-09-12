@@ -34,13 +34,37 @@
         "key": "",
         "secret": "",
         "ccxt_config": {
+            "enableRateLimit": true,
             "options": {
-                "defaultType": "spot"
+                "defaultType": "spot",
+                "fetchMarkets": [
+                    "spot"
+                ]
+            },
+            "urls": {
+                "api": {
+                    "public": "https://data-api.binance.vision/api/v3",
+                    "private": "https://data-api.binance.vision/api/v3",
+                    "v1": "https://data-api.binance.vision/api/v1",
+                    "v3": "https://data-api.binance.vision/api/v3"
+                }
             }
         },
         "ccxt_async_config": {
+            "enableRateLimit": true,
             "options": {
-                "defaultType": "spot"
+                "defaultType": "spot",
+                "fetchMarkets": [
+                    "spot"
+                ]
+            },
+            "urls": {
+                "api": {
+                    "public": "https://data-api.binance.vision/api/v3",
+                    "private": "https://data-api.binance.vision/api/v3",
+                    "v1": "https://data-api.binance.vision/api/v1",
+                    "v3": "https://data-api.binance.vision/api/v3"
+                }
             }
         },
         "pair_whitelist": [
@@ -170,7 +194,7 @@
         "username": "freqtrader",
         "password": "changeme"
     },
-    "bot_name": "score4window-universe100",
+    "bot_name": "score4window-universe100-cloudmirror",
     "initial_state": "running",
     "force_entry_enable": false,
     "internals": {
