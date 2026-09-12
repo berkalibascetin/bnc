@@ -39,27 +39,40 @@ def calc_size_pct(
 
 
 def supertrend(dataframe: DataFrame, period: int = 10, multiplier: float = 3.0) -> DataFrame:
-    """Classic Supertrend without lookahead (uses only current and past bars)."""
+    """Classic Supertrend without lookahead (uses only current and past bars).
+
+    Skips ATR warmup NaNs so bands do not permanently poison the series.
+    """
     hl2 = (dataframe["high"] + dataframe["low"]) / 2.0
     atr = dataframe["atr"]
-    upper = hl2 + multiplier * atr
-    lower = hl2 - multiplier * atr
-
-    st = np.zeros(len(dataframe), dtype=float)
-    direction = np.ones(len(dataframe), dtype=int)  # 1=up/bull, -1=down/bear
-    final_upper = upper.to_numpy(copy=True)
-    final_lower = lower.to_numpy(copy=True)
+    basic_ub = (hl2 + multiplier * atr).to_numpy()
+    basic_lb = (hl2 - multiplier * atr).to_numpy()
     close = dataframe["close"].to_numpy()
+    n = len(dataframe)
 
-    for i in range(1, len(dataframe)):
+    final_upper = np.full(n, np.nan)
+    final_lower = np.full(n, np.nan)
+    st = np.full(n, np.nan)
+    direction = np.ones(n, dtype=int)
+
+    for i in range(n):
+        if np.isnan(basic_ub[i]) or np.isnan(basic_lb[i]):
+            continue
+        if i == 0 or np.isnan(final_upper[i - 1]) or np.isnan(final_lower[i - 1]):
+            final_upper[i] = basic_ub[i]
+            final_lower[i] = basic_lb[i]
+            direction[i] = 1
+            st[i] = final_lower[i]
+            continue
+
         final_upper[i] = (
-            upper.iloc[i]
-            if (upper.iloc[i] < final_upper[i - 1] or close[i - 1] > final_upper[i - 1])
+            basic_ub[i]
+            if (basic_ub[i] < final_upper[i - 1] or close[i - 1] > final_upper[i - 1])
             else final_upper[i - 1]
         )
         final_lower[i] = (
-            lower.iloc[i]
-            if (lower.iloc[i] > final_lower[i - 1] or close[i - 1] < final_lower[i - 1])
+            basic_lb[i]
+            if (basic_lb[i] > final_lower[i - 1] or close[i - 1] < final_lower[i - 1])
             else final_lower[i - 1]
         )
         if direction[i - 1] == 1:
