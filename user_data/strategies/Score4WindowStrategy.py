@@ -5,9 +5,15 @@
 Score4WindowStrategy (SCORE_4WINDOW_V1)
 
 Core: deterministic 4-window price score (unchanged).
-Optional confirmation filters are OFF by default so baseline behavior is preserved.
-Enable exactly one filter at a time via Score4WindowStrategy.json for A/B tests.
+Optional confirmation filters are OFF by default so baseline entry is preserved.
+
+Position sizing (always on):
+  size_pct = (total_score * risk_pct) / atr_pct
+  stake    = wallet * size_pct / 100
+where atr_pct is computed by the strategy and risk_pct defaults to 2.
 """
+
+from datetime import datetime
 
 from pandas import DataFrame, Series
 import numpy as np
@@ -20,17 +26,12 @@ class Score4WindowStrategy(IStrategy):
     """
     Strategy ID: SCORE_4WINDOW_V1
 
-    Core entry (always required):
-      total_score >= entry_score_threshold (default 2)
-
-    Optional filters (all default OFF — baseline identical to V1):
-      volume / momentum / breakout / retest / volatility / fibonacci
+    Entry: total_score >= entry_score_threshold (default 2).
+    Stake: (score * risk%) / ATR% of wallet. risk% default = 2.
     """
 
     STRATEGY_ID = "SCORE_4WINDOW_V1"
-
     INTERFACE_VERSION = 3
-
     can_short: bool = False
 
     WINDOW_1W = 5
@@ -38,6 +39,7 @@ class Score4WindowStrategy(IStrategy):
     WINDOW_1M = 21
     WINDOW_2M = 42
     ENTRY_SCORE_THRESHOLD = 2
+    RISK_PCT = 2.0
 
     window_1w = IntParameter(1, 30, default=WINDOW_1W, space="buy", optimize=False, load=True)
     window_2w = IntParameter(2, 60, default=WINDOW_2W, space="buy", optimize=False, load=True)
@@ -47,7 +49,7 @@ class Score4WindowStrategy(IStrategy):
         1, 4, default=ENTRY_SCORE_THRESHOLD, space="buy", optimize=False, load=True
     )
 
-    # --- Optional filters: 0=off (baseline), 1=on. Enable one at a time for A/B. ---
+    # Optional filters: 0=off (baseline), 1=on
     enable_volume_filter = IntParameter(0, 1, default=0, space="buy", optimize=False, load=True)
     enable_momentum_filter = IntParameter(0, 1, default=0, space="buy", optimize=False, load=True)
     enable_breakout_filter = IntParameter(0, 1, default=0, space="buy", optimize=False, load=True)
@@ -55,7 +57,6 @@ class Score4WindowStrategy(IStrategy):
     enable_volatility_filter = IntParameter(0, 1, default=0, space="buy", optimize=False, load=True)
     enable_fibonacci_filter = IntParameter(0, 1, default=0, space="buy", optimize=False, load=True)
 
-    # Filter parameters (only applied when the matching enable_*=1)
     volume_ma_period = IntParameter(10, 40, default=20, space="buy", optimize=False, load=True)
     volume_mult = DecimalParameter(
         1.0, 3.0, default=1.5, decimals=1, space="buy", optimize=False, load=True
@@ -72,6 +73,17 @@ class Score4WindowStrategy(IStrategy):
         0.3, 5.0, default=1.0, decimals=1, space="buy", optimize=False, load=True
     )
     fib_lookback = IntParameter(20, 100, default=55, space="buy", optimize=False, load=True)
+
+    # Position sizing
+    risk_pct = DecimalParameter(
+        0.5, 5.0, default=RISK_PCT, decimals=1, space="buy", optimize=False, load=True
+    )
+    max_position_pct = DecimalParameter(
+        1.0, 100.0, default=25.0, decimals=1, space="buy", optimize=False, load=True
+    )
+    min_atr_pct = DecimalParameter(
+        0.05, 1.0, default=0.1, decimals=2, space="buy", optimize=False, load=True
+    )
 
     minimal_roi = {"0": 0.10}
     stoploss = -0.10
@@ -103,16 +115,20 @@ class Score4WindowStrategy(IStrategy):
                 "score_1m": {"color": "purple"},
                 "score_2m": {"color": "red"},
             },
+            "risk": {
+                "atr_pct": {"color": "gray"},
+                "position_size_pct": {"color": "teal"},
+            },
         },
     }
 
     def bot_start(self, **kwargs) -> None:
-        """Align startup history with score windows and any enabled filter lookbacks."""
         needed = [
             int(self.window_1w.value),
             int(self.window_2w.value),
             int(self.window_1m.value),
             int(self.window_2m.value),
+            int(self.atr_period.value) + 1,  # always needed for sizing
         ]
         if int(self.enable_volume_filter.value) == 1:
             needed.append(int(self.volume_ma_period.value))
@@ -130,12 +146,32 @@ class Score4WindowStrategy(IStrategy):
 
     @staticmethod
     def _window_score(dataframe: DataFrame, lookback: int) -> Series:
-        """Compare current close to close `lookback` ago using shift(+N) only."""
         historical = dataframe["close"].shift(lookback)
         return np.sign(dataframe["close"] - historical)
 
+    @staticmethod
+    def calc_position_size_pct(
+        score: float,
+        risk_pct: float,
+        atr_pct: float,
+        *,
+        min_atr_pct: float = 0.1,
+        max_position_pct: float = 25.0,
+    ) -> float:
+        """
+        size_pct = (score * risk_pct) / atr_pct
+
+        Example: score=2, risk=2, atr_pct=4 → 1.0 (% of wallet)
+        """
+        if score is None or np.isnan(score) or score <= 0:
+            return 0.0
+        if atr_pct is None or np.isnan(atr_pct) or atr_pct <= 0:
+            return 0.0
+        vol = max(float(atr_pct), float(min_atr_pct))
+        size = (float(score) * float(risk_pct)) / vol
+        return float(min(max(size, 0.0), float(max_position_pct)))
+
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
-        # --- Core 4-window score (unchanged) ---
         w1 = int(self.window_1w.value)
         w2 = int(self.window_2w.value)
         w3 = int(self.window_1m.value)
@@ -152,9 +188,16 @@ class Score4WindowStrategy(IStrategy):
             + dataframe["score_2m"]
         )
 
-        # --- Optional filter columns (computed for analysis; applied only if enabled) ---
-        # All use past data only (shift(+N) / rolling on shifted series).
+        # Volatility for position sizing (always computed)
+        atr_n = int(self.atr_period.value)
+        dataframe["atr"] = ta.ATR(dataframe, timeperiod=atr_n)
+        dataframe["atr_pct"] = (dataframe["atr"] / dataframe["close"]) * 100.0
+        dataframe["position_size_pct"] = (
+            (dataframe["total_score"].clip(lower=0) * float(self.risk_pct.value))
+            / dataframe["atr_pct"].clip(lower=float(self.min_atr_pct.value))
+        ).clip(upper=float(self.max_position_pct.value))
 
+        # Optional filters
         vol_n = int(self.volume_ma_period.value)
         dataframe["volume_ma"] = dataframe["volume"].rolling(vol_n).mean()
         dataframe["filt_volume"] = (
@@ -166,21 +209,16 @@ class Score4WindowStrategy(IStrategy):
         dataframe["filt_momentum"] = (dataframe["rsi"] > int(self.rsi_min.value)).astype(int)
 
         br_n = int(self.breakout_lookback.value)
-        # Prior N highs excluding current candle — no lookahead.
         dataframe["prior_high"] = dataframe["high"].shift(1).rolling(br_n).max()
         dataframe["filt_breakout"] = (dataframe["close"] > dataframe["prior_high"]).astype(int)
 
         rt_n = int(self.retest_lookback.value)
         tol = float(self.retest_tol_pct.value) / 100.0
         prior_high_rt = dataframe["high"].shift(1).rolling(rt_n).max()
-        # Retest: touched/near prior breakout level this candle, closed back above it.
         near_level = dataframe["low"] <= (prior_high_rt * (1.0 + tol))
         reclaimed = dataframe["close"] > prior_high_rt
         dataframe["filt_retest"] = (near_level & reclaimed).astype(int)
 
-        atr_n = int(self.atr_period.value)
-        dataframe["atr"] = ta.ATR(dataframe, timeperiod=atr_n)
-        dataframe["atr_pct"] = (dataframe["atr"] / dataframe["close"]) * 100.0
         dataframe["filt_volatility"] = (
             dataframe["atr_pct"] >= float(self.atr_min_pct.value)
         ).astype(int)
@@ -189,7 +227,6 @@ class Score4WindowStrategy(IStrategy):
         swing_high = dataframe["high"].shift(1).rolling(fib_n).max()
         swing_low = dataframe["low"].shift(1).rolling(fib_n).min()
         fib_range = (swing_high - swing_low).replace(0, np.nan)
-        # Bullish confirmation: price in upper half of recent range (>= 0.5 fib).
         dataframe["fib_50"] = swing_low + 0.5 * fib_range
         dataframe["filt_fibonacci"] = (dataframe["close"] >= dataframe["fib_50"]).astype(int)
 
@@ -197,7 +234,6 @@ class Score4WindowStrategy(IStrategy):
 
     def populate_entry_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         threshold = int(self.entry_score_threshold.value)
-
         score_cond = (
             (dataframe["total_score"] >= threshold)
             & (dataframe["total_score"].notna())
@@ -231,9 +267,62 @@ class Score4WindowStrategy(IStrategy):
         if active_filters:
             tag_base = tag_base + "|" + "|".join(active_filters)
         dataframe.loc[entry_cond, "enter_tag"] = tag_base[entry_cond]
-
         return dataframe
 
     def populate_exit_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         dataframe.loc[:, "exit_long"] = 0
         return dataframe
+
+    def custom_stake_amount(
+        self,
+        pair: str,
+        current_time: datetime,
+        current_rate: float,
+        proposed_stake: float,
+        min_stake: float | None,
+        max_stake: float,
+        leverage: float,
+        entry_tag: str | None,
+        side: str,
+        **kwargs,
+    ) -> float:
+        """
+        stake = wallet * (score * risk_pct / atr_pct) / 100
+
+        ATR% is computed by the strategy. risk_pct defaults to 2.
+        """
+        if self.dp is None:
+            return proposed_stake
+
+        dataframe, _ = self.dp.get_analyzed_dataframe(pair, self.timeframe)
+        if dataframe is None or dataframe.empty:
+            return proposed_stake
+
+        last = dataframe.iloc[-1]
+        score = float(last.get("total_score", 0) or 0)
+        atr_pct = float(last.get("atr_pct", 0) or 0)
+
+        size_pct = self.calc_position_size_pct(
+            score,
+            float(self.risk_pct.value),
+            atr_pct,
+            min_atr_pct=float(self.min_atr_pct.value),
+            max_position_pct=float(self.max_position_pct.value),
+        )
+        if size_pct <= 0:
+            return proposed_stake
+
+        stake_currency = self.config.get("stake_currency", "USDT")
+        if self.wallets is not None:
+            capital = float(self.wallets.get_total(stake_currency))
+        else:
+            capital = float(max_stake)
+
+        if capital <= 0:
+            return proposed_stake
+
+        stake = capital * (size_pct / 100.0)
+        stake = min(stake, float(max_stake))
+        if min_stake is not None:
+            stake = max(float(min_stake), stake)
+        return stake

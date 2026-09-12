@@ -13,6 +13,21 @@ exchange connectivity, backtesting, or order management.
 Deterministic price-only scoring across four lookback windows (default 5 / 10 / 21 / 42).
 Enter long when `total_score >= 2`. Shorts disabled. Exits via Freqtrade ROI/stoploss.
 
+### Position sizing (built-in)
+
+The strategy sizes each entry from score and volatility:
+
+```text
+size_pct = (total_score * risk_pct) / atr_pct
+stake    = wallet * size_pct / 100
+```
+
+- `atr_pct` = ATR(14) / close * 100 (computed by the strategy)
+- `risk_pct` default = **2**
+- Cap: `max_position_pct` default = 25 (safety)
+
+Example: score=2, risk=2, ATR%=4 → invest **1%** of wallet.
+
 ## Setup
 
 ```bash

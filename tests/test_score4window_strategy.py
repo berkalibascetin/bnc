@@ -321,5 +321,27 @@ class TestScore4WindowOptionalFilters:
             "filt_volatility",
             "filt_fibonacci",
             "total_score",
+            "atr_pct",
         ):
             assert df.loc[past, col] == df2.loc[past, col]
+
+
+class TestScore4WindowPositionSizing:
+    def test_size_formula_score_times_risk_over_vol(self, strategy):
+        # score=2, risk=2, atr%=4 → 1% of wallet
+        assert strategy.calc_position_size_pct(2, 2.0, 4.0) == 1.0
+        # score=4, risk=2, atr%=2 → 4%
+        assert strategy.calc_position_size_pct(4, 2.0, 2.0) == 4.0
+
+    def test_default_risk_is_two_percent(self, strategy):
+        assert float(strategy.risk_pct.value) == 2.0
+
+    def test_higher_volatility_means_smaller_size(self, strategy):
+        low_vol = strategy.calc_position_size_pct(2, 2.0, 1.0)
+        high_vol = strategy.calc_position_size_pct(2, 2.0, 8.0)
+        assert low_vol > high_vol
+
+    def test_invalid_inputs_yield_zero(self, strategy):
+        assert strategy.calc_position_size_pct(0, 2.0, 4.0) == 0.0
+        assert strategy.calc_position_size_pct(2, 2.0, 0.0) == 0.0
+        assert strategy.calc_position_size_pct(float("nan"), 2.0, 4.0) == 0.0
