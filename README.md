@@ -116,3 +116,19 @@ freqtrade trade -c user_data/config.json --userdir user_data --strategy Score4Wi
 
 Current-membership universe is for dry-run observation. Historical claims need
 date-aware membership (survivorship bias).
+
+## Dry-run observability
+
+Generate a read-only observation report from config + dry-run DB + logs:
+
+```bash
+python -m dry_run_observability report
+```
+
+Outputs:
+- `reports/dry_run_report.json`
+- `reports/dry_run_report.md`
+
+Docs: `docs/dry_run_observability.md`
+
+This does **not** change strategy logic, risk settings, or `dry_run`.

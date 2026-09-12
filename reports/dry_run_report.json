@@ -1,0 +1,311 @@
+{
+  "observation": {
+    "generated_at_utc": "2026-09-12 13:08:36Z",
+    "project_root": "/workspace",
+    "config_path": "/workspace/user_data/config.json",
+    "db_path": "/workspace/tradesv3.dryrun.sqlite",
+    "log_path": null,
+    "strategy_name": "Score4WindowStrategy",
+    "period": {
+      "observation_start": null,
+      "observation_end": null,
+      "span_hours": null,
+      "restarts_detected_from_logs": null,
+      "data_collection_gaps": [],
+      "note": "No timestamped logs; uptime cannot be inferred."
+    }
+  },
+  "universe": {
+    "configured_pair_count": 100,
+    "unique_pair_count": 100,
+    "duplicates": [],
+    "non_usdt_pairs": [],
+    "pairs": [
+      "BTC/USDT",
+      "ETH/USDT",
+      "SOL/USDT",
+      "BNB/USDT",
+      "XRP/USDT",
+      "ZEC/USDT",
+      "NEAR/USDT",
+      "SUI/USDT",
+      "DOGE/USDT",
+      "UNI/USDT",
+      "ENA/USDT",
+      "TRX/USDT",
+      "ADA/USDT",
+      "LINK/USDT",
+      "PEPE/USDT",
+      "TAO/USDT",
+      "AVAX/USDT",
+      "RAY/USDT",
+      "ARB/USDT",
+      "WLD/USDT",
+      "REZ/USDT",
+      "ETHFI/USDT",
+      "DASH/USDT",
+      "BCH/USDT",
+      "LTC/USDT",
+      "XLM/USDT",
+      "PAXG/USDT",
+      "TRUMP/USDT",
+      "AAVE/USDT",
+      "DOT/USDT",
+      "SOPH/USDT",
+      "ONDO/USDT",
+      "INJ/USDT",
+      "FET/USDT",
+      "PENGU/USDT",
+      "POL/USDT",
+      "LSK/USDT",
+      "MINA/USDT",
+      "APT/USDT",
+      "FIL/USDT",
+      "HBAR/USDT",
+      "AERO/USDT",
+      "BLUR/USDT",
+      "ZRO/USDT",
+      "ZEN/USDT",
+      "CAKE/USDT",
+      "PROM/USDT",
+      "SHIB/USDT",
+      "PENDLE/USDT",
+      "TIA/USDT",
+      "ICP/USDT",
+      "THETA/USDT",
+      "DOGS/USDT",
+      "MORPHO/USDT",
+      "IOST/USDT",
+      "CHZ/USDT",
+      "JST/USDT",
+      "RENDER/USDT",
+      "OP/USDT",
+      "EIGEN/USDT",
+      "VIRTUAL/USDT",
+      "ALGO/USDT",
+      "WBTC/USDT",
+      "TREE/USDT",
+      "ETC/USDT",
+      "SEI/USDT",
+      "ATOM/USDT",
+      "COTI/USDT",
+      "CRV/USDT",
+      "LDO/USDT",
+      "BONK/USDT",
+      "JTO/USDT",
+      "STRK/USDT",
+      "BERA/USDT",
+      "VET/USDT",
+      "WIF/USDT",
+      "RUNE/USDT",
+      "ORDI/USDT",
+      "STX/USDT",
+      "PYTH/USDT",
+      "EGLD/USDT",
+      "FLOKI/USDT",
+      "AR/USDT",
+      "LUNC/USDT",
+      "ENS/USDT",
+      "XTZ/USDT",
+      "DYDX/USDT",
+      "QNT/USDT",
+      "SAND/USDT",
+      "AXS/USDT",
+      "COMP/USDT",
+      "NEO/USDT",
+      "IOTA/USDT",
+      "GRT/USDT",
+      "SNX/USDT",
+      "NOT/USDT",
+      "FLOW/USDT",
+      "IMX/USDT",
+      "MANA/USDT",
+      "GMX/USDT"
+    ],
+    "exchange_name": "binance",
+    "pairs_with_local_1d_data": 100,
+    "pairs_missing_local_1d_data": [],
+    "note": "Configured StaticPairList is the intended scan universe."
+  },
+  "signals": {
+    "total_entry_signals_from_logs": 0,
+    "total_exit_signals_from_logs": 0,
+    "rejected_signals_from_logs": 0,
+    "entry_signals_by_pair": {},
+    "exit_signals_by_pair": {},
+    "entry_timestamps": [],
+    "exit_timestamps": [],
+    "limitation": "Exact raw strategy signals cannot be fully reconstructed without strategy instrumentation. Log-derived counts may undercount if logs were not saved.",
+    "trades_by_enter_tag_from_db": {
+      "score_4": 1,
+      "score_2": 4
+    }
+  },
+  "orders": {
+    "created": 5,
+    "open": 2,
+    "filled": 3,
+    "cancelled": 0,
+    "distinction_note": "OPEN ORDER = unfinished dry-run/exchange order. OPEN TRADE = trades.is_open=1. Unfilled entry orders can appear as amount=0 open trades.",
+    "suspicious": [
+      {
+        "kind": "order",
+        "order_id": "dry_run_buy_ETH/USDT_9ba75eb9-12f4-4349-9121-35c57963939d",
+        "pair": "ETH/USDT",
+        "status": "open",
+        "amount": 0.0119,
+        "filled": 0.0,
+        "age_minutes": 127.58,
+        "reasons": [
+          "open_unusually_long"
+        ],
+        "note": "OPEN ORDER (not a filled position)"
+      },
+      {
+        "kind": "order",
+        "order_id": "dry_run_buy_SOL/USDT_ce2578d6-3803-4a5d-9154-54864fb94fe8",
+        "pair": "SOL/USDT",
+        "status": "open",
+        "amount": 0.122,
+        "filled": 0.0,
+        "age_minutes": 127.58,
+        "reasons": [
+          "open_unusually_long"
+        ],
+        "note": "OPEN ORDER (not a filled position)"
+      },
+      {
+        "kind": "trade",
+        "trade_id": 1,
+        "pair": "ETH/USDT",
+        "amount": 0.0,
+        "open_rate": 2534.45,
+        "open_date": "2026-09-12 11:01:02.054483",
+        "reasons": [
+          "open_trade_amount_zero"
+        ],
+        "note": "Trade row exists with amount=0 (likely unfilled entry order)"
+      },
+      {
+        "kind": "trade",
+        "trade_id": 2,
+        "pair": "SOL/USDT",
+        "amount": 0.0,
+        "open_rate": 102.2,
+        "open_date": "2026-09-12 11:01:02.343435",
+        "reasons": [
+          "open_trade_amount_zero"
+        ],
+        "note": "Trade row exists with amount=0 (likely unfilled entry order)"
+      }
+    ]
+  },
+  "trades": {
+    "created": 5,
+    "currently_open": 5,
+    "closed": 0,
+    "filled_like": 3,
+    "distribution_by_pair": {
+      "BNB/USDT": 1,
+      "ETH/USDT": 1,
+      "NEAR/USDT": 1,
+      "SOL/USDT": 1,
+      "ZEC/USDT": 1
+    },
+    "open_details": [
+      {
+        "id": 1,
+        "pair": "ETH/USDT",
+        "amount": 0.0,
+        "open_rate": 2534.45,
+        "stake_amount": 30.2494104372546,
+        "open_date": "2026-09-12 11:01:02.054483",
+        "enter_tag": "score_4"
+      },
+      {
+        "id": 2,
+        "pair": "SOL/USDT",
+        "amount": 0.0,
+        "open_rate": 102.2,
+        "stake_amount": 12.557872016553747,
+        "open_date": "2026-09-12 11:01:02.343435",
+        "enter_tag": "score_2"
+      },
+      {
+        "id": 3,
+        "pair": "BNB/USDT",
+        "amount": 0.023,
+        "open_rate": 737.87,
+        "stake_amount": 16.97101,
+        "open_date": "2026-09-12 11:01:02.627452",
+        "enter_tag": "score_2"
+      },
+      {
+        "id": 4,
+        "pair": "ZEC/USDT",
+        "amount": 0.006,
+        "open_rate": 1153.75,
+        "stake_amount": 6.9225,
+        "open_date": "2026-09-12 11:01:02.913157",
+        "enter_tag": "score_2"
+      },
+      {
+        "id": 5,
+        "pair": "NEAR/USDT",
+        "amount": 3.1,
+        "open_rate": 2.378,
+        "stake_amount": 7.3718,
+        "open_date": "2026-09-12 11:01:03.198014",
+        "enter_tag": "score_2"
+      }
+    ],
+    "closed_details": [],
+    "average_duration_hours": null
+  },
+  "performance": {
+    "realized_simulated_pnl": null,
+    "unrealized_simulated_pnl": "N/A",
+    "unrealized_note": "Requires live mark prices; omitted in offline reporter.",
+    "win_rate": null,
+    "profit_factor": null,
+    "average_trade_pnl": null,
+    "max_drawdown": "N/A",
+    "closed_trade_count_for_metrics": 0,
+    "note": "Do not claim strategy profitability from tiny dry-run samples."
+  },
+  "api_health": {
+    "total": null,
+    "by_category": {},
+    "classification_note": "Temporary NetworkError/timeouts are API/network health issues, NOT strategy failures."
+  },
+  "system_health": {
+    "total": null,
+    "by_category": {},
+    "statement": "STRATEGY/SYSTEM ERRORS: unknown (no logs)"
+  },
+  "data_quality": {
+    "data_collection_gaps": [],
+    "pairs_missing_local_1d_data": [],
+    "notes": [
+      "PC sleep creates DATA COLLECTION GAP and reduces observation quality.",
+      "1\u20132 day samples validate operations; they do not prove edge."
+    ]
+  },
+  "safety": {
+    "dry_run": true,
+    "live_trading_disabled": true,
+    "exchange": "binance",
+    "timeframe": "1d",
+    "max_open_trades": 5,
+    "stake_amount": "unlimited",
+    "risk_pct": 3.0,
+    "stoploss_in_config": false,
+    "minimal_roi_in_config": false,
+    "strategy_name_expected": "Score4WindowStrategy",
+    "safe_to_continue_dry_run": true,
+    "stop_reason": null
+  },
+  "limitations": [
+    "No log file found; signal/API/system metrics from logs are limited."
+  ]
+}
