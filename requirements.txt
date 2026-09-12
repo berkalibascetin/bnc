@@ -1,0 +1,6 @@
+# Freqtrade strategy project (SCORE_4WINDOW_V1)
+# Install official Freqtrade, then use this user_data directory.
+freqtrade>=2024.1
+pytest>=7.0
+pandas>=2.0
+numpy>=1.24
