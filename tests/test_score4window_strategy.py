@@ -333,8 +333,8 @@ class TestScore4WindowPositionSizing:
         # score=4, risk=2, atr%=2 → 4%
         assert strategy.calc_position_size_pct(4, 2.0, 2.0) == 4.0
 
-    def test_default_risk_is_two_percent(self, strategy):
-        assert float(strategy.risk_pct.value) == 2.0
+    def test_default_risk_is_three_percent(self, strategy):
+        assert float(strategy.risk_pct.value) == 3.0
 
     def test_higher_volatility_means_smaller_size(self, strategy):
         low_vol = strategy.calc_position_size_pct(2, 2.0, 1.0)

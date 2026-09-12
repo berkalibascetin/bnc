@@ -10,7 +10,7 @@ Optional confirmation filters are OFF by default so baseline entry is preserved.
 Position sizing (always on):
   size_pct = (total_score * risk_pct) / atr_pct
   stake    = wallet * size_pct / 100
-where atr_pct is computed by the strategy and risk_pct defaults to 2.
+where atr_pct is computed by the strategy and risk_pct defaults to 3.
 """
 
 from datetime import datetime
@@ -27,7 +27,7 @@ class Score4WindowStrategy(IStrategy):
     Strategy ID: SCORE_4WINDOW_V1
 
     Entry: total_score >= entry_score_threshold (default 2).
-    Stake: (score * risk%) / ATR% of wallet. risk% default = 2.
+    Stake: (score * risk%) / ATR% of wallet. risk% default = 3.
     """
 
     STRATEGY_ID = "SCORE_4WINDOW_V1"
@@ -39,7 +39,7 @@ class Score4WindowStrategy(IStrategy):
     WINDOW_1M = 21
     WINDOW_2M = 42
     ENTRY_SCORE_THRESHOLD = 2
-    RISK_PCT = 2.0
+    RISK_PCT = 3.0
 
     window_1w = IntParameter(1, 30, default=WINDOW_1W, space="buy", optimize=False, load=True)
     window_2w = IntParameter(2, 60, default=WINDOW_2W, space="buy", optimize=False, load=True)
@@ -161,7 +161,7 @@ class Score4WindowStrategy(IStrategy):
         """
         size_pct = (score * risk_pct) / atr_pct
 
-        Example: score=2, risk=2, atr_pct=4 → 1.0 (% of wallet)
+        Example: score=2, risk=3, atr_pct=4 → 1.5 (% of wallet)
         """
         if score is None or np.isnan(score) or score <= 0:
             return 0.0
@@ -289,7 +289,7 @@ class Score4WindowStrategy(IStrategy):
         """
         stake = wallet * (score * risk_pct / atr_pct) / 100
 
-        ATR% is computed by the strategy. risk_pct defaults to 2.
+        ATR% is computed by the strategy. risk_pct defaults to 3.
         """
         if self.dp is None:
             return proposed_stake

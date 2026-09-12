@@ -23,10 +23,10 @@ stake    = wallet * size_pct / 100
 ```
 
 - `atr_pct` = ATR(14) / close * 100 (computed by the strategy)
-- `risk_pct` default = **2**
+- `risk_pct` default = **3**
 - Cap: `max_position_pct` default = 25 (safety)
 
-Example: score=2, risk=2, ATR%=4 → invest **1%** of wallet.
+Example: score=2, risk=3, ATR%=4 → invest **1.5%** of wallet.
 
 ## Setup
 
