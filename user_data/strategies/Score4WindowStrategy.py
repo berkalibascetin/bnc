@@ -99,7 +99,9 @@ class Score4WindowStrategy(IStrategy):
 
     timeframe = "1d"
     process_only_new_candles = True
-    use_exit_signal = False
+    # Required for custom_exit (dropped_from_top15). populate_exit_trend stays
+    # empty (exit_long=0); Freqtrade only calls custom_exit when this is True.
+    use_exit_signal = True
     exit_profit_only = False
     ignore_roi_if_entry_signal = False
 

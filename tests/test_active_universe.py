@@ -122,3 +122,42 @@ def test_config_active_universe_and_slot_cap():
     uni = json.loads(Path("user_data/config_binance_universe100.json").read_text())
     assert uni.get("max_open_trades") == 100
     assert (uni.get("active_universe") or {}).get("top_n") == 15
+
+
+def test_strategy_custom_exit_when_dropped():
+    from freqtrade.resolvers import StrategyResolver
+
+    user_data = Path("user_data")
+    strat = StrategyResolver.load_strategy(
+        {
+            "strategy": "Score4WindowStrategy",
+            "strategy_path": str(user_data / "strategies"),
+            "user_data_dir": user_data,
+            "timeframe": "1d",
+            "stake_currency": "USDT",
+            "dry_run": True,
+            "exchange": {"name": "binance"},
+            "active_universe": {
+                "enabled": True,
+                "top_n": 15,
+                "refresh_minutes": 30,
+                "exit_when_dropped": True,
+            },
+        }
+    )
+    assert strat.use_exit_signal is True
+    strat._active_universe = ActiveUniverseState(
+        enabled=True,
+        top_n=15,
+        exit_when_dropped=True,
+        pairs=["ETHFI/USDT", "NEAR/USDT"],
+    )
+    now = datetime(2026, 9, 13, 12, 0, tzinfo=timezone.utc)
+    assert (
+        strat.custom_exit("SOL/USDT", trade=object(), current_time=now, current_rate=1.0, current_profit=0.0)
+        == "dropped_from_top15"
+    )
+    assert (
+        strat.custom_exit("NEAR/USDT", trade=object(), current_time=now, current_rate=1.0, current_profit=0.0)
+        is None
+    )
