@@ -23,9 +23,37 @@ from score_scan.engine import (
     run_score_scan,
 )
 from score_scan.reporting import render_markdown
+from score4window_scoring import (
+    SIGNAL_BUY,
+    SIGNAL_HOLD,
+    SIGNAL_SELL,
+    SIGNAL_STRONG_BUY,
+    SIGNAL_STRONG_SELL,
+    signal_from_score,
+)
 
 USER_DATA = Path(__file__).resolve().parents[1] / "user_data"
 STRAT_PATH = USER_DATA / "strategies"
+
+
+@pytest.mark.parametrize(
+    ("score", "expected"),
+    [
+        (4, SIGNAL_STRONG_BUY),
+        (3, SIGNAL_BUY),
+        (2, SIGNAL_BUY),
+        (1, SIGNAL_HOLD),
+        (0, SIGNAL_HOLD),
+        (-1, SIGNAL_HOLD),
+        (-2, SIGNAL_SELL),
+        (-3, SIGNAL_SELL),
+        (-4, SIGNAL_STRONG_SELL),
+        (None, SIGNAL_HOLD),
+        (float("nan"), SIGNAL_HOLD),
+    ],
+)
+def test_signal_from_score_bands(score, expected):
+    assert signal_from_score(score) == expected
 
 
 def _config(score_scan: str = "off", dry_run: bool = True, pairs: list[str] | None = None) -> dict:
@@ -156,7 +184,8 @@ class TestScanner:
         ok = [r for r in payload["results"] if r["status"] == "ok"]
         assert ok[0]["rank"] == 1
         assert ok[0]["score"] == 4.0
-        assert ok[0]["signal"] == "BUY"
+        assert ok[0]["signal"] == "güçlü alım"
+        assert "BTC/USDT" in payload["summary"]["strong_buy_signals"]
 
     def test_hourly_same_hour_skipped(self, tmp_path, monkeypatch):
         cfg = _config("hourly", pairs=["BTC/USDT"])
@@ -256,16 +285,20 @@ class TestScanner:
                     "insufficient_data": 0,
                     "error": 0,
                     "max_score": 4,
+                    "min_score": 4,
                     "score_distribution": {"4": 1},
-                    "buy_signals": ["BTC/USDT"],
-                    "watch_candidates": [],
+                    "strong_buy_signals": ["BTC/USDT"],
+                    "buy_signals": [],
+                    "hold_signals": [],
+                    "sell_signals": [],
+                    "strong_sell_signals": [],
                 },
                 "results": [
                     {
                         "rank": 1,
                         "pair": "BTC/USDT",
                         "score": 4,
-                        "signal": "BUY",
+                        "signal": "güçlü alım",
                         "candle_timestamp": "x",
                         "status": "ok",
                         "reason": None,
@@ -275,6 +308,7 @@ class TestScanner:
         )
         assert "BTC/USDT" in md
         assert "Score Scan" in md
+        assert "güçlü alım" in md
 
 
 class TestStrategyHooks:

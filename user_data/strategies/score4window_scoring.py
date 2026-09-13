@@ -48,20 +48,37 @@ def apply_score4window_scores(
     return out
 
 
+# Observation-only labels (scan/report). Strategy entry still uses ENTRY_SCORE_THRESHOLD.
+SIGNAL_STRONG_BUY = "güçlü alım"  # score +4
+SIGNAL_BUY = "alım"  # score +2 (+3)
+SIGNAL_HOLD = "hold"  # score 0 (±1)
+SIGNAL_SELL = "sell"  # score -2 (-3)
+SIGNAL_STRONG_SELL = "hızlıca sell"  # score -4
+
+
 def signal_from_score(
     total_score: float | None,
     *,
-    entry_threshold: int = DEFAULT_ENTRY_SCORE_THRESHOLD,
+    entry_threshold: int = DEFAULT_ENTRY_SCORE_THRESHOLD,  # noqa: ARG001 — kept for call-site compat
 ) -> str:
-    """Map score to observation signal labels (does not place orders)."""
+    """
+    Map score → observation signal (does not place orders).
+
+    +4 güçlü alım | +2 alım | 0 hold | -2 sell | -4 hızlıca sell
+    Odd scores (±1/±3) snap to the nearest band of the same sign.
+    """
     if total_score is None or (isinstance(total_score, float) and np.isnan(total_score)):
-        return "HOLD"
+        return SIGNAL_HOLD
     score = float(total_score)
-    if score >= float(entry_threshold):
-        return "BUY"
-    if score > 0:
-        return "WATCH"
-    return "HOLD"
+    if score >= 4:
+        return SIGNAL_STRONG_BUY
+    if score >= 2:
+        return SIGNAL_BUY
+    if score <= -4:
+        return SIGNAL_STRONG_SELL
+    if score <= -2:
+        return SIGNAL_SELL
+    return SIGNAL_HOLD
 
 
 def min_candles_required(window_2m: int = DEFAULT_WINDOW_2M) -> int:

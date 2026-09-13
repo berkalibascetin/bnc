@@ -61,8 +61,17 @@ class ScanReport:
         for s in scores:
             key = str(int(s)) if float(s).is_integer() else str(s)
             dist[key] = dist.get(key, 0) + 1
-        buys = [r.pair for r in ok if r.signal == "BUY"]
-        watches = [r.pair for r in ok if r.signal == "WATCH"]
+        from score4window_scoring import (
+            SIGNAL_BUY,
+            SIGNAL_HOLD,
+            SIGNAL_SELL,
+            SIGNAL_STRONG_BUY,
+            SIGNAL_STRONG_SELL,
+        )
+
+        def _pairs(label: str) -> list[str]:
+            return [r.pair for r in ok if r.signal == label]
+
         return {
             "timestamp": self.timestamp,
             "mode": self.mode,
@@ -75,9 +84,13 @@ class ScanReport:
                 "insufficient_data": len(insuff),
                 "error": len(errs),
                 "max_score": max(scores) if scores else None,
+                "min_score": min(scores) if scores else None,
                 "score_distribution": dist,
-                "buy_signals": buys,
-                "watch_candidates": watches,
+                "strong_buy_signals": _pairs(SIGNAL_STRONG_BUY),
+                "buy_signals": _pairs(SIGNAL_BUY),
+                "hold_signals": _pairs(SIGNAL_HOLD),
+                "sell_signals": _pairs(SIGNAL_SELL),
+                "strong_sell_signals": _pairs(SIGNAL_STRONG_SELL),
             },
             "results": [
                 {
@@ -354,16 +367,16 @@ def _print_terminal(report: ScanReport) -> None:
         f"dry_run: {report.dry_run}",
         "==================================================",
         "",
-        f"{'Rank':<5} {'Pair':<14} {'Score':>6}  {'Signal':<8} Status",
+        f"{'Rank':<5} {'Pair':<14} {'Score':>6}  {'Signal':<14} Status",
     ]
     for r in report.results:
         if r.status == "ok":
             lines.append(
-                f"{(r.rank or '-'):<5} {r.pair:<14} {r.score:>6.0f}  {(r.signal or ''):<8} ok"
+                f"{(r.rank or '-'):<5} {r.pair:<14} {r.score:>6.0f}  {(r.signal or ''):<14} ok"
             )
         else:
             lines.append(
-                f"{'-':<5} {r.pair:<14} {'n/a':>6}  {'-':<8} {r.status}"
+                f"{'-':<5} {r.pair:<14} {'n/a':>6}  {'-':<14} {r.status}"
                 + (f" ({r.reason})" if r.reason else "")
             )
     summary = report.to_dict()["summary"]
@@ -372,10 +385,13 @@ def _print_terminal(report: ScanReport) -> None:
             "",
             (
                 f"scored={summary['scored']} insufficient={summary['insufficient_data']} "
-                f"error={summary['error']} max_score={summary['max_score']}"
+                f"error={summary['error']} max_score={summary['max_score']} "
+                f"min_score={summary['min_score']}"
             ),
-            f"BUY={summary['buy_signals']}",
-            f"WATCH={summary['watch_candidates']}",
+            f"güçlü alım(+4)={summary['strong_buy_signals']}",
+            f"alım(+2)={summary['buy_signals']}",
+            f"sell(-2)={summary['sell_signals']}",
+            f"hızlıca sell(-4)={summary['strong_sell_signals']}",
             "",
         ]
     )
