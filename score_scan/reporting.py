@@ -55,29 +55,39 @@ def render_markdown(payload: dict[str, Any]) -> str:
         f"- Scored: {s.get('scored')}",
         f"- Insufficient data: {s.get('insufficient_data')}",
         f"- Errors: {s.get('error')}",
-        f"- Max score: {s.get('max_score')}",
-        f"- Min score: {s.get('min_score')}",
+        f"- Max Score4Window: {s.get('max_score')}",
+        f"- Min Score4Window: {s.get('min_score')}",
+        f"- Max final_score: {s.get('max_final_score')}",
+        f"- Min final_score: {s.get('min_final_score')}",
         f"- Score distribution: `{s.get('score_distribution')}`",
         f"- güçlü alım (+4): {', '.join(s.get('strong_buy_signals') or []) or '-'}",
         f"- alım (+2): {', '.join(s.get('buy_signals') or []) or '-'}",
         f"- sell (-2): {', '.join(s.get('sell_signals') or []) or '-'}",
         f"- hızlıca sell (-4): {', '.join(s.get('strong_sell_signals') or []) or '-'}",
+        f"- max_open_trades: `{payload.get('max_open_trades')}`",
         "",
         "## Results",
         "",
-        "| Rank | Pair | Score | Signal | Candle | Status | Reason |",
-        "|------|------|------:|--------|--------|--------|--------|",
+        "| Rank | Pair | Final | MAIN | S1 | S2 | S3 | S4 | S7 | S4W | Signal | Status |",
+        "|------|------|------:|-----:|---:|---:|---:|---:|---:|----:|--------|--------|",
     ]
     for r in payload.get("results") or []:
+        def _n(v):
+            return "" if v is None else (f"{v:.1f}" if isinstance(v, float) else v)
         lines.append(
-            "| {rank} | {pair} | {score} | {signal} | {candle} | {status} | {reason} |".format(
+            "| {rank} | {pair} | {final} | {main} | {s1} | {s2} | {s3} | {s4} | {s7} | {s4w} | {signal} | {status} |".format(
                 rank=r.get("rank") if r.get("rank") is not None else "-",
                 pair=r.get("pair"),
-                score="" if r.get("score") is None else r.get("score"),
+                final=_n(r.get("final_score")),
+                main=_n(r.get("main_score")),
+                s1=_n(r.get("s1_score")),
+                s2=_n(r.get("s2_score")),
+                s3=_n(r.get("s3_score")),
+                s4=_n(r.get("s4_score")),
+                s7=_n(r.get("s7_score")),
+                s4w="" if r.get("score") is None else r.get("score"),
                 signal=r.get("signal") or "-",
-                candle=r.get("candle_timestamp") or "-",
                 status=r.get("status"),
-                reason=r.get("reason") or "",
             )
         )
     lines.append("")

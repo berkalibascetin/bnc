@@ -30,6 +30,9 @@ class Score4WindowStrategy(IStrategy):
 
     Entry: total_score >= entry_score_threshold (default 2).
     Stake: (score * risk%) / ATR% of wallet. risk% default = 3.
+
+    Deterministic MAIN/S1/S2/S3/S4/S7 composite scores are computed by
+    score_scan for ranking/observation only — they do NOT change entry.
     """
 
     STRATEGY_ID = "SCORE_4WINDOW_V1"

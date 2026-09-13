@@ -31,7 +31,7 @@ class ScanResultRow:
     pair: str
     status: str = "ok"  # ok | insufficient_data | error
     rank: int | None = None
-    score: float | None = None
+    score: float | None = None  # Score4Window total_score (authoritative)
     signal: str | None = None
     candle_timestamp: str | None = None
     score_1w: float | None = None
@@ -39,6 +39,16 @@ class ScanResultRow:
     score_1m: float | None = None
     score_2m: float | None = None
     reason: str | None = None
+    # Deterministic composite layers (observation / ranking only)
+    final_score: float | None = None
+    main_score: float | None = None
+    s1_score: float | None = None
+    s2_score: float | None = None
+    s3_score: float | None = None
+    s4_score: float | None = None
+    s7_score: float | None = None
+    regime: str | None = None
+    s4_status: str | None = None
 
 
 @dataclass
@@ -50,6 +60,7 @@ class ScanReport:
     results: list[ScanResultRow] = field(default_factory=list)
     dry_run: bool = True
     entry_score_threshold: int = 2
+    max_open_trades: int | None = None
     errors: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
@@ -57,6 +68,7 @@ class ScanReport:
         insuff = [r for r in self.results if r.status == "insufficient_data"]
         errs = [r for r in self.results if r.status == "error"]
         scores = [float(r.score) for r in ok if r.score is not None]
+        finals = [float(r.final_score) for r in ok if r.final_score is not None]
         dist: dict[str, int] = {}
         for s in scores:
             key = str(int(s)) if float(s).is_integer() else str(s)
@@ -79,12 +91,18 @@ class ScanReport:
             "pair_count": self.pair_count,
             "dry_run": self.dry_run,
             "entry_score_threshold": self.entry_score_threshold,
+            "max_open_trades": self.max_open_trades,
+            "successful_count": len(ok),
+            "insufficient_data_count": len(insuff),
+            "error_count": len(errs),
             "summary": {
                 "scored": len(ok),
                 "insufficient_data": len(insuff),
                 "error": len(errs),
                 "max_score": max(scores) if scores else None,
                 "min_score": min(scores) if scores else None,
+                "max_final_score": max(finals) if finals else None,
+                "min_final_score": min(finals) if finals else None,
                 "score_distribution": dist,
                 "strong_buy_signals": _pairs(SIGNAL_STRONG_BUY),
                 "buy_signals": _pairs(SIGNAL_BUY),
@@ -99,6 +117,15 @@ class ScanReport:
                     "score": r.score,
                     "signal": r.signal,
                     "candle_timestamp": r.candle_timestamp,
+                    "final_score": r.final_score,
+                    "main_score": r.main_score,
+                    "s1_score": r.s1_score,
+                    "s2_score": r.s2_score,
+                    "s3_score": r.s3_score,
+                    "s4_score": r.s4_score,
+                    "s7_score": r.s7_score,
+                    "regime": r.regime,
+                    "s4_status": r.s4_status,
                     "score_1w": r.score_1w,
                     "score_2w": r.score_2w,
                     "score_1m": r.score_1m,
@@ -119,6 +146,9 @@ def assert_dry_run_safe(config: dict[str, Any]) -> None:
             "score_scan safety abort: dry_run must be true (got "
             f"{config.get('dry_run')!r}). Scanner will not run."
         )
+    from deterministic_layers.safety import assert_max_open_trades_research_safe
+
+    assert_max_open_trades_research_safe(config)
 
 
 def _hour_key(now: datetime | None = None) -> str:
@@ -175,7 +205,8 @@ def _score_one(
     *,
     entry_threshold: int,
     min_candles: int,
-) -> ScanResultRow:
+) -> tuple[ScanResultRow, pd.DataFrame | None]:
+    """Return (row, scored_df). scored_df feeds deterministic composite layers."""
     import sys
     from pathlib import Path as _Path
     _strat_dir = str(_Path(__file__).resolve().parents[1] / "user_data" / "strategies")
@@ -184,16 +215,18 @@ def _score_one(
     from score4window_scoring import signal_from_score
 
     if dataframe is None or dataframe.empty:
-        return ScanResultRow(
-            pair=pair,
-            status="insufficient_data",
-            reason="no_ohlcv",
+        return (
+            ScanResultRow(pair=pair, status="insufficient_data", reason="no_ohlcv"),
+            None,
         )
     if len(dataframe) < min_candles:
-        return ScanResultRow(
-            pair=pair,
-            status="insufficient_data",
-            reason=f"need>={min_candles}_candles_have_{len(dataframe)}",
+        return (
+            ScanResultRow(
+                pair=pair,
+                status="insufficient_data",
+                reason=f"need>={min_candles}_candles_have_{len(dataframe)}",
+            ),
+            None,
         )
     try:
         meta = {"pair": pair}
@@ -201,10 +234,11 @@ def _score_one(
         last = scored.iloc[-1]
         total = last.get("total_score")
         if total is None or (isinstance(total, float) and pd.isna(total)):
-            return ScanResultRow(
-                pair=pair,
-                status="insufficient_data",
-                reason="total_score_nan",
+            return (
+                ScanResultRow(
+                    pair=pair, status="insufficient_data", reason="total_score_nan"
+                ),
+                None,
             )
         score_f = float(total)
         candle_ts = last.get("date")
@@ -219,7 +253,7 @@ def _score_one(
                 return None
             return float(v)
 
-        return ScanResultRow(
+        row = ScanResultRow(
             pair=pair,
             status="ok",
             score=score_f,
@@ -230,8 +264,42 @@ def _score_one(
             score_1m=_comp("score_1m"),
             score_2m=_comp("score_2m"),
         )
+        return row, scored
     except Exception as exc:  # noqa: BLE001
-        return ScanResultRow(pair=pair, status="error", reason=str(exc))
+        return ScanResultRow(pair=pair, status="error", reason=str(exc)), None
+
+
+def _attach_composite_layers(
+    rows: list[ScanResultRow],
+    scored_frames: dict[str, pd.DataFrame],
+) -> None:
+    """Mutate rows with MAIN/S1/S2/S3/S4/S7 + final_score (observation only)."""
+    if not scored_frames:
+        return
+    try:
+        from deterministic_layers.composite import score_universe
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("score_scan: composite layers unavailable: %s", exc)
+        return
+    try:
+        composites = score_universe(scored_frames)
+    except Exception:
+        logger.exception("score_scan: composite scoring failed")
+        return
+    by_pair = {c.pair: c for c in composites}
+    for row in rows:
+        c = by_pair.get(row.pair)
+        if c is None:
+            continue
+        row.final_score = c.final_score
+        row.main_score = c.main_score
+        row.s1_score = c.s1_score
+        row.s2_score = c.s2_score
+        row.s3_score = c.s3_score
+        row.s4_score = c.s4_score
+        row.s7_score = c.s7_score
+        row.regime = c.regime
+        row.s4_status = c.s4_status
 
 
 def run_score_scan(
@@ -298,25 +366,36 @@ def run_score_scan(
             pair_count=len(pair_list),
             dry_run=bool(config.get("dry_run")),
             entry_score_threshold=entry_threshold,
+            max_open_trades=config.get("max_open_trades"),
         )
 
         rows: list[ScanResultRow] = []
+        scored_frames: dict[str, pd.DataFrame] = {}
         for pair in pair_list:
             df = _load_ohlcv_for_pair(strategy, pair, timeframe)
-            rows.append(
-                _score_one(
-                    strategy,
-                    pair,
-                    df,
-                    entry_threshold=entry_threshold,
-                    min_candles=min_candles,
-                )
+            row, scored = _score_one(
+                strategy,
+                pair,
+                df,
+                entry_threshold=entry_threshold,
+                min_candles=min_candles,
             )
+            rows.append(row)
+            if scored is not None and not scored.empty:
+                scored_frames[pair] = scored
 
-        # Sort: ok rows by score desc, then insufficient/error at end (stable by pair)
+        _attach_composite_layers(rows, scored_frames)
+
+        # Prefer final_score ranking; fall back to Score4Window score.
         ok_rows = [r for r in rows if r.status == "ok"]
         other_rows = [r for r in rows if r.status != "ok"]
-        ok_rows.sort(key=lambda r: (-(r.score or -999), r.pair))
+        ok_rows.sort(
+            key=lambda r: (
+                -(r.final_score if r.final_score is not None else -999.0),
+                -(r.score if r.score is not None else -999.0),
+                r.pair,
+            )
+        )
         for i, r in enumerate(ok_rows, start=1):
             r.rank = i
         report.results = ok_rows + other_rows
@@ -367,16 +446,27 @@ def _print_terminal(report: ScanReport) -> None:
         f"dry_run: {report.dry_run}",
         "==================================================",
         "",
-        f"{'Rank':<5} {'Pair':<14} {'Score':>6}  {'Signal':<14} Status",
+        (
+            f"{'Rank':<5} {'Pair':<12} {'Final':>5} {'MAIN':>4} {'S1':>4} "
+            f"{'S2':>4} {'S3':>4} {'S4':>4} {'S7':>4} {'S4W':>4} Status"
+        ),
     ]
     for r in report.results:
         if r.status == "ok":
+
+            def _fmt(v: float | None, w: int = 4) -> str:
+                return f"{v:>{w}.0f}" if v is not None else f"{'-':>{w}}"
+
             lines.append(
-                f"{(r.rank or '-'):<5} {r.pair:<14} {r.score:>6.0f}  {(r.signal or ''):<14} ok"
+                f"{(r.rank or '-'):<5} {r.pair:<12} "
+                f"{_fmt(r.final_score, 5)} {_fmt(r.main_score)} {_fmt(r.s1_score)} "
+                f"{_fmt(r.s2_score)} {_fmt(r.s3_score)} {_fmt(r.s4_score)} {_fmt(r.s7_score)} "
+                f"{_fmt(r.score)} ok"
             )
         else:
             lines.append(
-                f"{'-':<5} {r.pair:<14} {'n/a':>6}  {'-':<14} {r.status}"
+                f"{'-':<5} {r.pair:<12} {'n/a':>5} {'-':>4} {'-':>4} {'-':>4} "
+                f"{'-':>4} {'-':>4} {'-':>4} {'-':>4} {r.status}"
                 + (f" ({r.reason})" if r.reason else "")
             )
     summary = report.to_dict()["summary"]
