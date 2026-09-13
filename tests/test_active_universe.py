@@ -103,7 +103,7 @@ def test_write_report(tmp_path: Path):
         refreshed_at="2026-09-13T12:00:00+00:00",
     )
     path = write_active_universe_report(state, tmp_path)
-    assert path.name == "active_top15_latest.json"
+    assert path.name == "active_universe_latest.json"
     payload = json.loads(path.read_text())
     assert payload["pairs"] == ["BTC/USDT", "ETH/USDT"]
     assert payload["top_n"] == 15
@@ -111,17 +111,18 @@ def test_write_report(tmp_path: Path):
 
 def test_config_active_universe_and_slot_cap():
     cfg = json.loads(Path("user_data/config.json").read_text())
-    assert cfg.get("max_open_trades") == 100
+    # Temporary observation mode: slot cap unlimited; Top-15 gate fully off.
+    assert cfg.get("max_open_trades") == 1_000_000
     assert cfg.get("stake_amount") == "unlimited"
     block = cfg.get("active_universe") or {}
-    assert block.get("enabled") is True
-    assert block.get("top_n") == 15
+    assert block.get("enabled") is False
+    assert block.get("top_n") == 1_000_000
     assert block.get("refresh_minutes") == 30
-    assert block.get("exit_when_dropped") is True
 
     uni = json.loads(Path("user_data/config_binance_universe100.json").read_text())
-    assert uni.get("max_open_trades") == 100
-    assert (uni.get("active_universe") or {}).get("top_n") == 15
+    assert uni.get("max_open_trades") == 1_000_000
+    assert (uni.get("active_universe") or {}).get("enabled") is False
+    assert (uni.get("active_universe") or {}).get("top_n") == 1_000_000
 
 
 def test_strategy_custom_exit_when_dropped():

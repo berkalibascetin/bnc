@@ -13,7 +13,8 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_TOP_N = 15
 DEFAULT_REFRESH_MINUTES = 30
-DEFAULT_REPORT_NAME = "active_top15_latest.json"
+# Generic name — not tied to Top-15 (top_n may be 15 or 1_000_000).
+DEFAULT_REPORT_NAME = "active_universe_latest.json"
 
 
 @dataclass
@@ -180,7 +181,7 @@ def refresh_active_universe(
 
     out = write_active_universe_report(state, Path(str(settings["reports_dir"])))
     logger.info(
-        "active_universe: refreshed top_%s (%s pairs) -> %s | file=%s",
+        "active_universe: refreshed top_n=%s selected=%s pairs -> %s | file=%s",
         state.top_n,
         len(state.pairs),
         state.pairs,
