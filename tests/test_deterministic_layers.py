@@ -200,7 +200,7 @@ def test_replay_as_of_ignores_future_candles():
 
 def test_dry_run_and_max_open_trades_safety():
     validate_research_trading_config(
-        {"dry_run": True, "max_open_trades": 100, "stake_amount": "unlimited"}
+        {"dry_run": True, "max_open_trades": 1000, "stake_amount": "unlimited"}
     )
     with pytest.raises(RuntimeError):
         assert_dry_run_true({"dry_run": False})
@@ -222,7 +222,7 @@ def test_dry_run_and_max_open_trades_safety():
 def test_config_dry_run_true_and_research_slot_cap():
     cfg = json.loads(Path("user_data/config.json").read_text())
     assert cfg.get("dry_run") is True
-    assert cfg.get("max_open_trades") == 100
+    assert cfg.get("max_open_trades") == 1000
     assert cfg.get("stake_amount") == "unlimited"
     validate_research_trading_config(cfg)
 
