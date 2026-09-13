@@ -1,0 +1,242 @@
+{
+  "task": "phase_a_model_b_failure_diagnosis",
+  "frozen_A_unchanged": true,
+  "phase_b_started": false,
+  "zips": {
+    "A": "/workspace/user_data/backtest_results/backtest-result-2026-09-13_12-04-47.zip",
+    "B": "/workspace/user_data/backtest_results/backtest-result-2026-09-13_12-14-29.zip"
+  },
+  "a_all_stats": {
+    "trades": 2426,
+    "win_rate": 0.5259686727122836,
+    "total_profit_abs": 266.74261335,
+    "profit_factor": 1.1943710964452867,
+    "expectancy": 0.10995161308738664,
+    "avg_profit_ratio": 0.004351618828462857,
+    "max_drawdown_approx": 0.09368949947000005
+  },
+  "a_in_b_window_stats": {
+    "trades": 1605,
+    "win_rate": 0.5233644859813084,
+    "total_profit_abs": 160.57770768999995,
+    "profit_factor": 1.1662904128676888,
+    "expectancy": 0.1000484160062305,
+    "avg_profit_ratio": 0.0037948722691092604,
+    "max_drawdown_approx": 0.09141860031999995
+  },
+  "a_passed_gate_stats": {
+    "trades": 669,
+    "win_rate": 0.5216741405082213,
+    "total_profit_abs": 60.16520633,
+    "profit_factor": 1.1524687922422405,
+    "expectancy": 0.08993304384155455,
+    "avg_profit_ratio": 0.0031121596735896686,
+    "max_drawdown_approx": 0.052612895899999984
+  },
+  "a_filtered_by_gate_stats": {
+    "trades": 936,
+    "win_rate": 0.5245726495726496,
+    "total_profit_abs": 100.41250136,
+    "profit_factor": 1.1758415978011818,
+    "expectancy": 0.10727831341880341,
+    "avg_profit_ratio": 0.004282836720394098,
+    "max_drawdown_approx": 0.06854816838
+  },
+  "b_actual_stats": {
+    "trades": 846,
+    "win_rate": 0.5177304964539007,
+    "total_profit_abs": 57.061021,
+    "profit_factor": 1.1106319439757923,
+    "expectancy": 0.06744801536643026,
+    "avg_profit_ratio": 0.0026754811066404065,
+    "max_drawdown_approx": 0.06277113342999997
+  },
+  "reject_reasons": {
+    "a_trades_in_b_window": 1605,
+    "missing_prediction": 0,
+    "do_predict_ne_1": 4,
+    "pred_le_threshold": 932,
+    "passed_gate": 669,
+    "filtered_by_gate": 936
+  },
+  "prediction_distribution_b_window": {
+    "n": 48087,
+    "mean": 0.0005350467364251746,
+    "std": 0.027626407116860575,
+    "p10": -0.03277421015028046,
+    "p25": -0.016043640222107913,
+    "p50": 0.0,
+    "p75": 0.016299032054812052,
+    "p90": 0.0339245842488955,
+    "frac_gt_0": 0.4985339072930314,
+    "frac_gt_0_005": 0.4129390479755443,
+    "frac_gt_0_01": 0.3360575623349346,
+    "frac_lt_0": 0.49304385800736167,
+    "do_predict_1_frac": 0.991577765300393
+  },
+  "threshold_sweep_on_a_window_entries": [
+    {
+      "trades": 1151,
+      "win_rate": 0.5160729800173762,
+      "total_profit_abs": 99.01048802999999,
+      "profit_factor": 1.1358904978707196,
+      "expectancy": 0.0860212754387489,
+      "avg_profit_ratio": 0.00232906668879202,
+      "max_drawdown_approx": 0.06879025631999999,
+      "threshold": -0.02,
+      "pass_rate": 0.7189256714553404
+    },
+    {
+      "trades": 902,
+      "win_rate": 0.5066518847006651,
+      "total_profit_abs": 68.68280996000001,
+      "profit_factor": 1.1224690355828568,
+      "expectancy": 0.07614502212860312,
+      "avg_profit_ratio": 0.00038831125921901015,
+      "max_drawdown_approx": 0.046746379890000016,
+      "threshold": -0.01,
+      "pass_rate": 0.5633978763272954
+    },
+    {
+      "trades": 784,
+      "win_rate": 0.5153061224489796,
+      "total_profit_abs": 66.93325670999998,
+      "profit_factor": 1.1413706052566,
+      "expectancy": 0.08537405192602038,
+      "avg_profit_ratio": 0.0020043924318264845,
+      "max_drawdown_approx": 0.050592195189999994,
+      "threshold": -0.005,
+      "pass_rate": 0.4896939412866958
+    },
+    {
+      "trades": 669,
+      "win_rate": 0.5216741405082213,
+      "total_profit_abs": 60.16520633,
+      "profit_factor": 1.1524687922422405,
+      "expectancy": 0.08993304384155455,
+      "avg_profit_ratio": 0.0031121596735896686,
+      "max_drawdown_approx": 0.052612895899999984,
+      "threshold": 0.0,
+      "pass_rate": 0.4178638351030606
+    },
+    {
+      "trades": 550,
+      "win_rate": 0.5272727272727272,
+      "total_profit_abs": 40.964640459999984,
+      "profit_factor": 1.1299985504331491,
+      "expectancy": 0.07448116447272725,
+      "avg_profit_ratio": 0.004392892911287096,
+      "max_drawdown_approx": 0.05290321152,
+      "threshold": 0.005,
+      "pass_rate": 0.3435352904434728
+    },
+    {
+      "trades": 440,
+      "win_rate": 0.5295454545454545,
+      "total_profit_abs": 28.181941630000004,
+      "profit_factor": 1.1148989833458127,
+      "expectancy": 0.0640498673409091,
+      "avg_profit_ratio": 0.004764753752825453,
+      "max_drawdown_approx": 0.039481019900000004,
+      "threshold": 0.01,
+      "pass_rate": 0.27482823235477827
+    },
+    {
+      "trades": 272,
+      "win_rate": 0.5036764705882353,
+      "total_profit_abs": 5.858696320000007,
+      "profit_factor": 1.0375909159550087,
+      "expectancy": 0.02153932470588238,
+      "avg_profit_ratio": -0.0003661579492142286,
+      "max_drawdown_approx": 0.029054709610000007,
+      "threshold": 0.02,
+      "pass_rate": 0.16989381636477202
+    },
+    {
+      "trades": 185,
+      "win_rate": 0.4702702702702703,
+      "total_profit_abs": -17.534065050000002,
+      "profit_factor": 0.8493269854935588,
+      "expectancy": -0.09477873000000002,
+      "avg_profit_ratio": -0.007231019527321444,
+      "max_drawdown_approx": 0.03927975660000001,
+      "threshold": 0.03,
+      "pass_rate": 0.1155527795128045
+    },
+    {
+      "trades": 75,
+      "win_rate": 0.4666666666666667,
+      "total_profit_abs": -8.053010299999999,
+      "profit_factor": 0.8331521810957851,
+      "expectancy": -0.10737347066666665,
+      "avg_profit_ratio": -0.007489348550734534,
+      "max_drawdown_approx": 0.024908666840000003,
+      "threshold": 0.05,
+      "pass_rate": 0.046845721424109935
+    }
+  ],
+  "passed_conditions": {
+    "n": 669,
+    "avg_pred": 0.022549118520588107,
+    "avg_entry_score": 3.327354260089686,
+    "avg_btc_ret_5d": 0.004547553392402682,
+    "avg_profit_ratio": 0.0031121596735896686,
+    "win_rate": 0.5216741405082213,
+    "score_ge_2_frac": 1.0,
+    "btc_down_frac": 0.4618834080717489
+  },
+  "filtered_conditions": {
+    "n": 936,
+    "avg_pred": -0.02390804619264796,
+    "avg_entry_score": 3.4006410256410255,
+    "avg_btc_ret_5d": 0.008006761302106046,
+    "avg_profit_ratio": 0.004282836720394098,
+    "win_rate": 0.5245726495726496,
+    "score_ge_2_frac": 1.0,
+    "btc_down_frac": 0.45405982905982906
+  },
+  "exit_breakdown_A": {
+    "roi": 1268,
+    "stop_loss": 1144,
+    "force_exit": 14
+  },
+  "exit_breakdown_B": {
+    "roi": 433,
+    "stop_loss": 404,
+    "force_exit": 9
+  },
+  "hold_vs_target": {
+    "avg_hold_days": 3.7304204451772467,
+    "median_hold_days": 1.0,
+    "frac_hold_gt_1d": 0.4802143446001649,
+    "frac_hold_ge_3d": 0.3520197856553998,
+    "roi_exit_frac": 0.5226710634789777,
+    "stoploss_exit_frac": 0.47155812036273703,
+    "target_horizon_days": 1,
+    "minimal_roi": {
+      "0": 0.1
+    },
+    "stoploss": -0.1,
+    "alignment_note": "Target=1d forward return; exits are \u00b110% ROI/SL over multi-day holds \u2014 horizon mismatch."
+  },
+  "root_cause": {
+    "a_all_trades": 2426,
+    "a_trades_in_b_effective_window": 1605,
+    "window_reduction_frac": 0.3384171475680132,
+    "of_window_missing_pred_frac": 0.0,
+    "of_window_filtered_by_threshold_or_dopredict_frac": 0.5831775700934579,
+    "of_window_passed_frac": 0.41682242990654206,
+    "b_actual_trades": 846,
+    "primary_drivers": [
+      "FreqAI warmup shortens B's effective window vs A (large trade-count cut before AI gate).",
+      "Among A entries with predictions, pred<=0 threshold rejects more than do_predict!=1.",
+      "Predictions are not strongly skewed positive; >0 threshold removes a large share.",
+      "1d forward-return target poorly aligned with multi-day ROI/SL exits \u2014 wrong learning horizon.",
+      "Filtered-out A trades had HIGHER expectancy than passed ones \u2014 gate removes good trades."
+    ]
+  },
+  "b_avg_profit_ratio": 0.0026754811066404065,
+  "a_window_avg_profit_ratio": 0.0037948722691092604,
+  "passed_avg_profit_ratio": 0.0031121596735896686,
+  "filtered_avg_profit_ratio": 0.004282836720394098
+}
