@@ -10,10 +10,11 @@ Optional confirmation filters are OFF by default so baseline entry is preserved.
 Position sizing (always on):
   size_pct = (total_score * risk_pct) / atr_pct
   stake    = wallet * size_pct / 100
-where atr_pct is computed by the strategy and risk_pct defaults to 2.
+where atr_pct is computed by the strategy and risk_pct defaults to 3.
 """
 
 from datetime import datetime
+from typing import Any
 
 from pandas import DataFrame, Series
 import numpy as np
@@ -21,13 +22,20 @@ import talib.abstract as ta
 
 from freqtrade.strategy import IStrategy, IntParameter, DecimalParameter
 
+from score4window_scoring import apply_score4window_scores
+
 
 class Score4WindowStrategy(IStrategy):
     """
     Strategy ID: SCORE_4WINDOW_V1
 
     Entry: total_score >= entry_score_threshold (default 2).
-    Stake: (score * risk%) / ATR% of wallet. risk% default = 2.
+    Stake: (score * risk%) / ATR% of wallet. risk% default = 3.
+
+    Deterministic MAIN/S1/S2/S3/S4/S7 composite scores are computed by
+    score_scan for ranking. Pre-AI active_universe may restrict new entries
+    to the current top-N (default 15), refreshed every 30 minutes.
+    Score4Window entry math (total_score >= threshold) stays unchanged.
     """
 
     STRATEGY_ID = "SCORE_4WINDOW_V1"
@@ -39,7 +47,7 @@ class Score4WindowStrategy(IStrategy):
     WINDOW_1M = 21
     WINDOW_2M = 42
     ENTRY_SCORE_THRESHOLD = 2
-    RISK_PCT = 2.0
+    RISK_PCT = 3.0
 
     window_1w = IntParameter(1, 30, default=WINDOW_1W, space="buy", optimize=False, load=True)
     window_2w = IntParameter(2, 60, default=WINDOW_2W, space="buy", optimize=False, load=True)
@@ -91,15 +99,21 @@ class Score4WindowStrategy(IStrategy):
 
     timeframe = "1d"
     process_only_new_candles = True
-    use_exit_signal = False
+    # use_exit_signal kept True so custom_exit remains callable if explicitly
+    # re-enabled via config. Phase A default: exit_when_dropped=false (no-op).
+    # populate_exit_trend stays empty (exit_long=0).
+    use_exit_signal = True
     exit_profit_only = False
     ignore_roi_if_entry_signal = False
 
     startup_candle_count: int = WINDOW_2M
 
+    # Market entry/exit: dry-run limit exits often sit unfilled and look like
+    # "stopped selling" after the first dropped_from_top15 wave. Market closes
+    # top-N drop exits immediately (still dry_run only).
     order_types = {
-        "entry": "limit",
-        "exit": "limit",
+        "entry": "market",
+        "exit": "market",
         "stoploss": "market",
         "stoploss_on_exchange": False,
     }
@@ -144,10 +158,79 @@ class Score4WindowStrategy(IStrategy):
             needed.append(int(self.fib_lookback.value) + 1)
         self.startup_candle_count = max(needed)
 
+        # Observation-only score scan. Never places orders / never flips dry_run.
+        # Force executes on first bot_loop_start (after OHLCV is available).
+        mode = str((self.config or {}).get("score_scan", "off")).lower()
+        self._score_scan_force_pending = mode == "force"
+
+        # Pre-AI active universe (top-N). Empty until first refresh in bot_loop_start.
+        from active_universe import ActiveUniverseState, load_active_universe_settings
+
+        settings = load_active_universe_settings(self.config or {})
+        self._active_universe = ActiveUniverseState(
+            enabled=bool(settings["enabled"]),
+            top_n=int(settings["top_n"]),
+            refresh_minutes=int(settings["refresh_minutes"]),
+            exit_when_dropped=bool(settings["exit_when_dropped"]),
+        )
+        self._active_universe_force_pending = bool(settings["enabled"])
+
+    def bot_loop_start(self, current_time: datetime, **kwargs) -> None:
+        """Refresh top-N universe + optional observation score scan. No orders here."""
+        # 1) Active universe refresh (independent of score_scan mode).
+        try:
+            from active_universe import refresh_active_universe
+
+            state = getattr(self, "_active_universe", None)
+            if state is not None and state.enabled:
+                force = bool(getattr(self, "_active_universe_force_pending", False))
+                self._active_universe = refresh_active_universe(
+                    self,
+                    self.config or {},
+                    state,
+                    now=current_time,
+                    force=force,
+                )
+                self._active_universe_force_pending = False
+        except Exception:
+            import logging
+            logging.getLogger(__name__).exception(
+                "active_universe: refresh failed (continuing dry-run)"
+            )
+
+        # 2) Optional observation score_scan (force/hourly).
+        try:
+            mode = str((self.config or {}).get("score_scan", "off")).lower()
+            if mode == "off":
+                return
+            from score_scan.engine import run_score_scan
+
+            if mode == "force" and getattr(self, "_score_scan_force_pending", False):
+                run_score_scan(self, self.config or {}, mode="force", now=current_time)
+                self._score_scan_force_pending = False
+            elif mode == "hourly":
+                run_score_scan(self, self.config or {}, mode="hourly", now=current_time)
+        except Exception:
+            import logging
+            logging.getLogger(__name__).exception(
+                "score_scan: scan failed (continuing dry-run)"
+            )
+
+    def _pair_in_active_universe(self, pair: str) -> bool:
+        state = getattr(self, "_active_universe", None)
+        if state is None or not state.enabled:
+            return True
+        # Before first successful refresh, block entries (avoid trading full 100).
+        if not state.pairs:
+            return False
+        return pair in state.as_set()
+
     @staticmethod
     def _window_score(dataframe: DataFrame, lookback: int) -> Series:
-        historical = dataframe["close"].shift(lookback)
-        return np.sign(dataframe["close"] - historical)
+        # Delegate to shared authoritative scorer (kept for callers/tests).
+        from score4window_scoring import window_score
+
+        return window_score(dataframe["close"], lookback)
 
     @staticmethod
     def calc_position_size_pct(
@@ -161,7 +244,7 @@ class Score4WindowStrategy(IStrategy):
         """
         size_pct = (score * risk_pct) / atr_pct
 
-        Example: score=2, risk=2, atr_pct=4 → 1.0 (% of wallet)
+        Example: score=2, risk=3, atr_pct=4 → 1.5 (% of wallet)
         """
         if score is None or np.isnan(score) or score <= 0:
             return 0.0
@@ -177,15 +260,13 @@ class Score4WindowStrategy(IStrategy):
         w3 = int(self.window_1m.value)
         w4 = int(self.window_2m.value)
 
-        dataframe["score_1w"] = self._window_score(dataframe, w1)
-        dataframe["score_2w"] = self._window_score(dataframe, w2)
-        dataframe["score_1m"] = self._window_score(dataframe, w3)
-        dataframe["score_2m"] = self._window_score(dataframe, w4)
-        dataframe["total_score"] = (
-            dataframe["score_1w"]
-            + dataframe["score_2w"]
-            + dataframe["score_1m"]
-            + dataframe["score_2m"]
+        # Authoritative score math (shared with score_scan).
+        dataframe = apply_score4window_scores(
+            dataframe,
+            window_1w=w1,
+            window_2w=w2,
+            window_1m=w3,
+            window_2m=w4,
         )
 
         # Volatility for position sizing (always computed)
@@ -262,6 +343,10 @@ class Score4WindowStrategy(IStrategy):
             entry_cond = entry_cond & (dataframe["filt_fibonacci"] == 1)
             active_filters.append("fib")
 
+        pair = str(metadata.get("pair") or "")
+        if pair and not self._pair_in_active_universe(pair):
+            entry_cond = entry_cond & False
+
         dataframe.loc[entry_cond, "enter_long"] = 1
         tag_base = "score_" + dataframe["total_score"].fillna(0).astype(int).astype(str)
         if active_filters:
@@ -272,6 +357,56 @@ class Score4WindowStrategy(IStrategy):
     def populate_exit_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         dataframe.loc[:, "exit_long"] = 0
         return dataframe
+
+    def confirm_trade_entry(
+        self,
+        pair: str,
+        order_type: str,
+        amount: float,
+        rate: float,
+        time_in_force: str,
+        current_time: datetime,
+        entry_tag: str | None,
+        side: str,
+        **kwargs,
+    ) -> bool:
+        """Hard gate: only current top-N may open (pre-AI volume control)."""
+        allowed = self._pair_in_active_universe(pair)
+        if not allowed:
+            import logging
+
+            logging.getLogger(__name__).info(
+                "active_universe: skip entry %s (not in current top-%s)",
+                pair,
+                getattr(getattr(self, "_active_universe", None), "top_n", "?"),
+            )
+        return allowed
+
+    def custom_exit(
+        self,
+        pair: str,
+        trade: Any,
+        current_time: datetime,
+        current_rate: float,
+        current_profit: float,
+        **kwargs,
+    ) -> str | bool | None:
+        """
+        Top-15 drop exit is OFF by default (Phase A policy).
+
+        Open trades must NOT close merely because a pair left the active
+        Top-15. ROI / stoploss / strategy exits continue to apply.
+
+        Opt-in only when active_universe.exit_when_dropped is explicitly true.
+        """
+        state = getattr(self, "_active_universe", None)
+        if state is None or not state.enabled or not state.exit_when_dropped:
+            return None
+        if not state.pairs:
+            return None
+        if pair not in state.as_set():
+            return "dropped_from_top15"
+        return None
 
     def custom_stake_amount(
         self,
@@ -289,7 +424,7 @@ class Score4WindowStrategy(IStrategy):
         """
         stake = wallet * (score * risk_pct / atr_pct) / 100
 
-        ATR% is computed by the strategy. risk_pct defaults to 2.
+        ATR% is computed by the strategy. risk_pct defaults to 3.
         """
         if self.dp is None:
             return proposed_stake
