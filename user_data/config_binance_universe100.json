@@ -178,7 +178,7 @@
     },
     "active_universe": {
         "enabled": true,
-        "top_n": 15,
+        "top_n": 1000000,
         "refresh_minutes": 30,
         "exit_when_dropped": true,
         "reports_dir": "reports"
