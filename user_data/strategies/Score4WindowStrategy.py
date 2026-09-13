@@ -107,11 +107,12 @@ class Score4WindowStrategy(IStrategy):
 
     startup_candle_count: int = WINDOW_2M
 
-    # Market entries avoid dry-run "ghost" open trades (amount=0 limit buys
-    # that never fill but still consume max_open_trades slots).
+    # Market entry/exit: dry-run limit exits often sit unfilled and look like
+    # "stopped selling" after the first dropped_from_top15 wave. Market closes
+    # top-N drop exits immediately (still dry_run only).
     order_types = {
         "entry": "market",
-        "exit": "limit",
+        "exit": "market",
         "stoploss": "market",
         "stoploss_on_exchange": False,
     }
