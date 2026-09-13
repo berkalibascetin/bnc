@@ -42,7 +42,7 @@ def write_reports(report: ScanReport, reports_dir: Path, *, retention: int = DEF
 def render_markdown(payload: dict[str, Any]) -> str:
     s = payload.get("summary") or {}
     lines = [
-        f"# Score Scan — {str(payload.get('mode', '')).upper()}",
+        f"# Score Scan - {str(payload.get('mode', '')).upper()}",
         "",
         f"- Timestamp: `{payload.get('timestamp')}`",
         f"- Timeframe: `{payload.get('timeframe')}`",
