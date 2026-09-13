@@ -99,8 +99,10 @@ class Score4WindowStrategy(IStrategy):
 
     startup_candle_count: int = WINDOW_2M
 
+    # Market entries avoid dry-run "ghost" open trades (amount=0 limit buys
+    # that never fill but still consume max_open_trades slots).
     order_types = {
-        "entry": "limit",
+        "entry": "market",
         "exit": "limit",
         "stoploss": "market",
         "stoploss_on_exchange": False,
