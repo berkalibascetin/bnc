@@ -103,7 +103,7 @@ def test_write_report(tmp_path: Path):
         refreshed_at="2026-09-13T12:00:00+00:00",
     )
     path = write_active_universe_report(state, tmp_path)
-    assert path.name == "active_top15_latest.json"
+    assert path.name == "active_universe_latest.json"
     payload = json.loads(path.read_text())
     assert payload["pairs"] == ["BTC/USDT", "ETH/USDT"]
     assert payload["top_n"] == 15
