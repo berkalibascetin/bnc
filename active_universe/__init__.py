@@ -12,6 +12,13 @@ Does not place orders itself. Never flips dry_run.
 
 from __future__ import annotations
 
+from active_universe.historical import (
+    build_historical_top_membership,
+    is_optimize_runmode,
+    membership_series_for_pair,
+    pair_in_membership,
+    top_pairs_at,
+)
 from active_universe.manager import (
     DEFAULT_REFRESH_MINUTES,
     DEFAULT_TOP_N,
@@ -26,8 +33,13 @@ __all__ = [
     "DEFAULT_REFRESH_MINUTES",
     "DEFAULT_TOP_N",
     "ActiveUniverseState",
+    "build_historical_top_membership",
+    "is_optimize_runmode",
     "load_active_universe_settings",
+    "membership_series_for_pair",
+    "pair_in_membership",
     "refresh_active_universe",
     "select_top_pairs",
     "should_refresh",
+    "top_pairs_at",
 ]

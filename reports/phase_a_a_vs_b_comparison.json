@@ -1,0 +1,157 @@
+{
+  "task": "phase_a_model_b_backtest",
+  "timerange_requested": "20240101-20260901",
+  "data": {
+    "datadir": "/workspace/user_data/data/binance",
+    "n_1d_files": 100,
+    "timerange_requested": "20240101-20260901",
+    "note": "Local 1d OHLCV starts ~2024-07-05 for most pairs; requested timerange 20240101-20260901 is clipped by available history. No Binance download attempted."
+  },
+  "offline_markets_patch": true,
+  "frozen_A": {
+    "strategy": "Score4WindowStrategy",
+    "effective_timerange": "2024-08-16 00:00:00 \u2192 2026-09-01 00:00:00",
+    "timeframe": "1d",
+    "trades": 2426,
+    "win_rate": 0.5259686727122836,
+    "profit_pct": 0.26674261335,
+    "total_profit": 266.74261335,
+    "profit_factor": 1.1943710964452867,
+    "sharpe": 4.707412131765382,
+    "sortino": 10.930170809302597,
+    "max_drawdown": 0.0896481513559791,
+    "avg_profit": 0.004351618828462857,
+    "avg_duration": "3 days, 17:32:00",
+    "expectancy": 0.10995161308738664,
+    "fees": null
+  },
+  "B": {
+    "label": "B_freqai",
+    "strategy": "Score4WindowFreqaiStrategy",
+    "freqaimodel": "LightGBMRegressor",
+    "config_used": "/tmp/phase_a_B_freqai_config.json",
+    "runtime_exit_pricing_override": {
+      "price_side": "other"
+    },
+    "raw_keys": [
+      "metadata",
+      "strategy",
+      "strategy_comparison"
+    ],
+    "elapsed_sec": 820.5147092342377,
+    "metrics": {
+      "trades": 846,
+      "win_rate": 0.5177304964539007,
+      "total_profit": 57.061021,
+      "profit_pct": 0.057061020999999996,
+      "profit_factor": 1.1106319439757923,
+      "sharpe": 1.4638150119749376,
+      "sortino": 3.066270899340186,
+      "max_drawdown": 0.0631138788084271,
+      "avg_profit": 0.0026754811066404065,
+      "avg_duration": "4 days, 13:47:00",
+      "notes": [
+        "results.strategy.*"
+      ],
+      "expectancy": 0.06744801536643019,
+      "backtest_start": "2025-05-01 00:00:00",
+      "backtest_end": "2026-09-01 00:00:00"
+    },
+    "strategy_stats": {
+      "total_trades": 846,
+      "wins": 438,
+      "losses": 408,
+      "draws": 0,
+      "winrate": 0.5177304964539007,
+      "profit_total": 0.057061020999999996,
+      "profit_total_abs": 57.061021,
+      "profit_factor": 1.1106319439757923,
+      "sharpe": 1.4638150119749376,
+      "sortino": 3.066270899340186,
+      "max_drawdown_account": 0.0631138788084271,
+      "profit_mean": 0.0026754811066404065,
+      "holding_avg": "4 days, 13:47:00",
+      "expectancy": 0.06744801536643019,
+      "backtest_start": "2025-05-01 00:00:00",
+      "backtest_end": "2026-09-01 00:00:00",
+      "starting_balance": 1000,
+      "final_balance": 1057.061021
+    }
+  },
+  "comparison": {
+    "rows": [
+      {
+        "metric": "trades",
+        "A": 2426,
+        "B": 846
+      },
+      {
+        "metric": "win_rate",
+        "A": 0.5259686727122836,
+        "B": 0.5177304964539007
+      },
+      {
+        "metric": "profit_pct",
+        "A": 0.26674261335,
+        "B": 0.057061020999999996
+      },
+      {
+        "metric": "total_profit",
+        "A": 266.74261335,
+        "B": 57.061021
+      },
+      {
+        "metric": "profit_factor",
+        "A": 1.1943710964452867,
+        "B": 1.1106319439757923
+      },
+      {
+        "metric": "expectancy",
+        "A": 0.10995161308738664,
+        "B": 0.06744801536643019
+      },
+      {
+        "metric": "max_drawdown",
+        "A": 0.0896481513559791,
+        "B": 0.0631138788084271
+      },
+      {
+        "metric": "sharpe",
+        "A": 4.707412131765382,
+        "B": 1.4638150119749376
+      },
+      {
+        "metric": "sortino",
+        "A": 10.930170809302597,
+        "B": 3.066270899340186
+      },
+      {
+        "metric": "avg_profit",
+        "A": 0.004351618828462857,
+        "B": 0.0026754811066404065
+      },
+      {
+        "metric": "fees",
+        "A": null,
+        "B": null
+      },
+      {
+        "metric": "avg_duration",
+        "A": "3 days, 17:32:00",
+        "B": "4 days, 13:47:00"
+      }
+    ],
+    "verdict": "A_STILL_AHEAD",
+    "reason": "A remains ahead on profit, profit factor, expectancy, Sharpe/Sortino, and trade sample; B only improves max drawdown. Phase B must not start from this B result.",
+    "notes": [
+      "B profit \u2264 A profit under matched stake/fee/max_open_trades.",
+      "Effective windows differ: A 2024-08-16\u21922026-09-01; B 2025-05-01\u21922026-09-01 (FreqAI train_period_days=180 warmup).",
+      "B max DD lower (6.31% vs 8.96%) but trade count, PF, expectancy, Sharpe/Sortino, avg trade all favor A.",
+      "Fee rate 0.10% worst-case for both; per-run fee sums not exported.",
+      "Higher B profit would still not be automatic Phase A success; here B is not ahead."
+    ]
+  },
+  "baseline_A_modified": false,
+  "params_tuned": false,
+  "phase_b_started": false
+}

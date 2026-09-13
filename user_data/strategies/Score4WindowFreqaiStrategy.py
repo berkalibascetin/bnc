@@ -197,9 +197,19 @@ class Score4WindowFreqaiStrategy(_Score4WindowBase):
         else:
             ai_cond = False
         entry_cond = score_cond & ai_cond
+        # Historical candle-causal Top-15 in backtest/hyperopt; live snapshot otherwise.
         pair = str(metadata.get("pair") or "")
-        if pair and not self._pair_in_active_universe(pair):
-            entry_cond = entry_cond & False
+        if pair and self._active_universe_enabled():
+            if self._use_historical_top15_gate():
+                from active_universe.historical import membership_series_for_pair
+
+                membership = self._ensure_historical_top15()
+                in_top = membership_series_for_pair(
+                    membership, pair, dataframe["date"]
+                )
+                entry_cond = entry_cond & in_top.to_numpy()
+            elif not self._pair_in_active_universe(pair):
+                entry_cond = entry_cond & False
         dataframe.loc[entry_cond, "enter_long"] = 1
         tag = (
             "s4w_"
@@ -225,7 +235,25 @@ class Score4WindowFreqaiStrategy(_Score4WindowBase):
         side: str,
         **kwargs,
     ) -> bool:
-        in_top = self._pair_in_active_universe(pair)
+        # Top-15: same candle-causal / live logic as baseline A (do not regress).
+        if not super().confirm_trade_entry(
+            pair,
+            order_type,
+            amount,
+            rate,
+            time_in_force,
+            current_time,
+            entry_tag,
+            side,
+            **kwargs,
+        ):
+            return False
+
+        # Backtest: AI gate already applied per-candle in populate_entry_trend.
+        if self._use_historical_top15_gate():
+            return True
+
+        # Live / dry-run: defense-in-depth AI + score check on latest candle.
         dataframe, _ = (
             self.dp.get_analyzed_dataframe(pair, self.timeframe) if self.dp else (None, None)
         )
@@ -237,12 +265,11 @@ class Score4WindowFreqaiStrategy(_Score4WindowBase):
         pred_thr = self._prediction_threshold()
         baseline_ok = (not np.isnan(total)) and total >= int(self.entry_score_threshold.value)
         ai_ok = do_pred == 1 and (not np.isnan(pred)) and pred > pred_thr
-        allow = bool(in_top and baseline_ok and ai_ok)
+        allow = bool(baseline_ok and ai_ok)
         logger.info(
-            "freqai_phase_a decision pair=%s in_top15=%s total_score=%s final_score=%s "
+            "freqai_phase_a decision pair=%s total_score=%s final_score=%s "
             "prediction=%s do_predict=%s threshold=%s entry=%s tag=%s",
             pair,
-            in_top,
             total,
             final,
             pred,

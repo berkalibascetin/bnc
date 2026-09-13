@@ -14,6 +14,7 @@ where atr_pct is computed by the strategy and risk_pct defaults to 3.
 """
 
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 from pandas import DataFrame, Series
@@ -177,6 +178,12 @@ class Score4WindowStrategy(IStrategy):
 
     def bot_loop_start(self, current_time: datetime, **kwargs) -> None:
         """Refresh top-N universe + optional observation score scan. No orders here."""
+        # Backtest/hyperopt: Top-15 is applied candle-by-candle via historical
+        # membership (no live snapshot). Skip live refresh to avoid lookahead
+        # and wasted full-universe scans on every candle.
+        if self._use_historical_top15_gate():
+            return
+
         # 1) Active universe refresh (independent of score_scan mode).
         try:
             from active_universe import refresh_active_universe
@@ -216,6 +223,87 @@ class Score4WindowStrategy(IStrategy):
                 "score_scan: scan failed (continuing dry-run)"
             )
 
+    def _active_universe_enabled(self) -> bool:
+        state = getattr(self, "_active_universe", None)
+        if state is not None:
+            return bool(state.enabled)
+        from active_universe import load_active_universe_settings
+
+        return bool(load_active_universe_settings(self.config or {})["enabled"])
+
+    def _use_historical_top15_gate(self) -> bool:
+        """Backtest/hyperopt + active_universe enabled → candle-causal Top-N."""
+        if not self._active_universe_enabled():
+            return False
+        from active_universe.historical import is_optimize_runmode
+
+        return is_optimize_runmode(self.config or {})
+
+    def _ensure_historical_top15(self) -> dict:
+        """Build once per backtest: date → frozenset(top-N pairs), data <= date."""
+        cached = getattr(self, "_historical_top15_by_date", None)
+        if cached is not None:
+            return cached
+
+        import logging
+
+        from active_universe import load_active_universe_settings
+        from active_universe.historical import (
+            build_historical_top_membership,
+            load_scored_universe_frames,
+            resolve_datadir,
+        )
+
+        log = logging.getLogger(__name__)
+        settings = load_active_universe_settings(self.config or {})
+        top_n = int(settings["top_n"])
+        timeframe = str(
+            (self.config or {}).get("timeframe") or getattr(self, "timeframe", "1d")
+        )
+        pairs = list(
+            ((self.config or {}).get("exchange") or {}).get("pair_whitelist") or []
+        )
+        if not pairs and getattr(self, "dp", None) is not None:
+            try:
+                pairs = list(self.dp.current_whitelist())
+            except Exception:  # noqa: BLE001
+                pairs = []
+
+        injected = getattr(self, "_historical_scored_frames", None)
+        datadir = resolve_datadir(self.config or {})
+        if injected is None and datadir is None:
+            log.warning(
+                "historical_top15: no datadir — empty membership (entries blocked)"
+            )
+            self._historical_top15_by_date = {}
+            return self._historical_top15_by_date
+
+        min_candles = int(self.window_2m.value) + 1
+        log.info(
+            "historical_top15: building causal Top-%s for %s pairs (%s)",
+            top_n,
+            len(pairs) if injected is None else len(injected),
+            timeframe,
+        )
+        frames = load_scored_universe_frames(
+            pairs=pairs,
+            timeframe=timeframe,
+            datadir=datadir or Path("."),
+            scored_frames=injected,
+        )
+        membership = build_historical_top_membership(
+            frames,
+            top_n=top_n,
+            min_candles=min_candles,
+        )
+        self._historical_top15_by_date = membership
+        log.info(
+            "historical_top15: ready (%s dates, top_n=%s)",
+            len(membership),
+            top_n,
+        )
+        return membership
+
     def _pair_in_active_universe(self, pair: str) -> bool:
         state = getattr(self, "_active_universe", None)
         if state is None or not state.enabled:
@@ -225,6 +313,18 @@ class Score4WindowStrategy(IStrategy):
             return False
         return pair in state.as_set()
 
+    def _pair_allowed_for_entry(self, pair: str, when: datetime | None = None) -> bool:
+        """Entry gate: historical Top-N in backtest; live snapshot otherwise."""
+        if not self._active_universe_enabled():
+            return True
+        if self._use_historical_top15_gate():
+            from active_universe.historical import pair_in_membership
+
+            membership = self._ensure_historical_top15()
+            if when is None:
+                return False
+            return pair_in_membership(membership, pair, when)
+        return self._pair_in_active_universe(pair)
     @staticmethod
     def _window_score(dataframe: DataFrame, lookback: int) -> Series:
         # Delegate to shared authoritative scorer (kept for callers/tests).
@@ -344,8 +444,17 @@ class Score4WindowStrategy(IStrategy):
             active_filters.append("fib")
 
         pair = str(metadata.get("pair") or "")
-        if pair and not self._pair_in_active_universe(pair):
-            entry_cond = entry_cond & False
+        if pair and self._active_universe_enabled():
+            if self._use_historical_top15_gate():
+                from active_universe.historical import membership_series_for_pair
+
+                membership = self._ensure_historical_top15()
+                in_top = membership_series_for_pair(
+                    membership, pair, dataframe["date"]
+                )
+                entry_cond = entry_cond & in_top.to_numpy()
+            elif not self._pair_in_active_universe(pair):
+                entry_cond = entry_cond & False
 
         dataframe.loc[entry_cond, "enter_long"] = 1
         tag_base = "score_" + dataframe["total_score"].fillna(0).astype(int).astype(str)
@@ -370,15 +479,26 @@ class Score4WindowStrategy(IStrategy):
         side: str,
         **kwargs,
     ) -> bool:
-        """Hard gate: only current top-N may open (pre-AI volume control)."""
-        allowed = self._pair_in_active_universe(pair)
+        """Hard gate: only Top-N may open (historical in backtest, live snapshot otherwise)."""
+        # Shifted signals: entry on candle T uses signal from T-1; gate on the
+        # signal candle (previous daily bar) for historical membership.
+        gate_time = current_time
+        if self._use_historical_top15_gate():
+            try:
+                from freqtrade.exchange import timeframe_to_prev_date
+
+                gate_time = timeframe_to_prev_date(self.timeframe, current_time)
+            except Exception:  # noqa: BLE001
+                gate_time = current_time
+        allowed = self._pair_allowed_for_entry(pair, gate_time)
         if not allowed:
             import logging
 
             logging.getLogger(__name__).info(
-                "active_universe: skip entry %s (not in current top-%s)",
+                "active_universe: skip entry %s (not in top-%s at %s)",
                 pair,
                 getattr(getattr(self, "_active_universe", None), "top_n", "?"),
+                gate_time,
             )
         return allowed
 
