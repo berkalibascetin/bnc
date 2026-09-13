@@ -29,7 +29,7 @@ def assert_max_open_trades_research_safe(config: dict[str, Any]) -> None:
     if max_ot == -1 and stake_unlimited:
         raise RuntimeError(
             "safety abort: max_open_trades and stake_amount cannot both be "
-            "unlimited (Freqtrade). Use a finite max_open_trades (e.g. 1000) "
+            "unlimited (Freqtrade). Use a finite max_open_trades (e.g. 100) "
             "when stake_amount='unlimited'."
         )
     if max_ot == -1 and config.get("dry_run") is not True:

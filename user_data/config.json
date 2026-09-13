@@ -1,6 +1,6 @@
 {
     "$schema": "https://schema.freqtrade.io/schema.json",
-    "max_open_trades": 1000,
+    "max_open_trades": 100,
     "stake_currency": "USDT",
     "stake_amount": "unlimited",
     "tradable_balance_ratio": 0.99,
@@ -176,5 +176,13 @@
     "force_entry_enable": false,
     "internals": {
         "process_throttle_secs": 5
-    }
+    },
+    "active_universe": {
+        "enabled": true,
+        "top_n": 15,
+        "refresh_minutes": 30,
+        "exit_when_dropped": true,
+        "reports_dir": "reports"
+    },
+    "score_scan": "off"
 }
