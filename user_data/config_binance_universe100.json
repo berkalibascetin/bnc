@@ -180,7 +180,7 @@
         "enabled": true,
         "top_n": 15,
         "refresh_minutes": 30,
-        "exit_when_dropped": true,
+        "exit_when_dropped": false,
         "reports_dir": "reports"
     },
     "score_scan": "off"

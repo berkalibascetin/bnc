@@ -21,7 +21,8 @@ class ActiveUniverseState:
     enabled: bool = True
     top_n: int = DEFAULT_TOP_N
     refresh_minutes: int = DEFAULT_REFRESH_MINUTES
-    exit_when_dropped: bool = True
+    # Phase A+: Top-15 is an ENTRY gate only. Dropping out must not force-exit.
+    exit_when_dropped: bool = False
     pairs: list[str] = field(default_factory=list)
     ranks: dict[str, int] = field(default_factory=dict)
     scores: dict[str, float | None] = field(default_factory=dict)
@@ -42,7 +43,7 @@ def load_active_universe_settings(config: dict[str, Any]) -> dict[str, Any]:
             "enabled": False,
             "top_n": DEFAULT_TOP_N,
             "refresh_minutes": DEFAULT_REFRESH_MINUTES,
-            "exit_when_dropped": True,
+            "exit_when_dropped": False,
             "reports_dir": "reports",
         }
     block = config.get("active_universe") or {}
@@ -50,7 +51,8 @@ def load_active_universe_settings(config: dict[str, Any]) -> dict[str, Any]:
         "enabled": bool(block.get("enabled", True)),
         "top_n": int(block.get("top_n", DEFAULT_TOP_N)),
         "refresh_minutes": int(block.get("refresh_minutes", DEFAULT_REFRESH_MINUTES)),
-        "exit_when_dropped": bool(block.get("exit_when_dropped", True)),
+        # Default False: open trades are NOT closed when a pair leaves Top-15.
+        "exit_when_dropped": bool(block.get("exit_when_dropped", False)),
         "reports_dir": block.get("reports_dir") or "reports",
     }
 

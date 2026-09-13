@@ -47,7 +47,7 @@ def test_load_settings_from_config():
                 "enabled": True,
                 "top_n": 15,
                 "refresh_minutes": 30,
-                "exit_when_dropped": True,
+                "exit_when_dropped": False,
                 "reports_dir": "reports",
             }
         }
@@ -55,7 +55,7 @@ def test_load_settings_from_config():
     assert settings["enabled"] is True
     assert settings["top_n"] == 15
     assert settings["refresh_minutes"] == 30
-    assert settings["exit_when_dropped"] is True
+    assert settings["exit_when_dropped"] is False
 
 
 def test_select_top_pairs_takes_first_n_by_rank():
@@ -117,14 +117,14 @@ def test_config_active_universe_and_slot_cap():
     assert block.get("enabled") is True
     assert block.get("top_n") == 15
     assert block.get("refresh_minutes") == 30
-    assert block.get("exit_when_dropped") is True
+    assert block.get("exit_when_dropped") is False
 
     uni = json.loads(Path("user_data/config_binance_universe100.json").read_text())
     assert uni.get("max_open_trades") == 100
     assert (uni.get("active_universe") or {}).get("top_n") == 15
 
 
-def test_strategy_custom_exit_when_dropped():
+def test_strategy_custom_exit_drop_disabled_by_default():
     from freqtrade.resolvers import StrategyResolver
 
     user_data = Path("user_data")
@@ -141,7 +141,7 @@ def test_strategy_custom_exit_when_dropped():
                 "enabled": True,
                 "top_n": 15,
                 "refresh_minutes": 30,
-                "exit_when_dropped": True,
+                "exit_when_dropped": False,
             },
         }
     )
@@ -149,13 +149,14 @@ def test_strategy_custom_exit_when_dropped():
     strat._active_universe = ActiveUniverseState(
         enabled=True,
         top_n=15,
-        exit_when_dropped=True,
+        exit_when_dropped=False,
         pairs=["ETHFI/USDT", "NEAR/USDT"],
     )
     now = datetime(2026, 9, 13, 12, 0, tzinfo=timezone.utc)
+    # Left Top-15 but drop-exit OFF → keep trade open (ROI/SL handle exits).
     assert (
         strat.custom_exit("SOL/USDT", trade=object(), current_time=now, current_rate=1.0, current_profit=0.0)
-        == "dropped_from_top15"
+        is None
     )
     assert (
         strat.custom_exit("NEAR/USDT", trade=object(), current_time=now, current_rate=1.0, current_profit=0.0)

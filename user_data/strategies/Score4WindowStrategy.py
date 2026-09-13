@@ -99,8 +99,9 @@ class Score4WindowStrategy(IStrategy):
 
     timeframe = "1d"
     process_only_new_candles = True
-    # Required for custom_exit (dropped_from_top15). populate_exit_trend stays
-    # empty (exit_long=0); Freqtrade only calls custom_exit when this is True.
+    # use_exit_signal kept True so custom_exit remains callable if explicitly
+    # re-enabled via config. Phase A default: exit_when_dropped=false (no-op).
+    # populate_exit_trend stays empty (exit_long=0).
     use_exit_signal = True
     exit_profit_only = False
     ignore_roi_if_entry_signal = False
@@ -390,7 +391,14 @@ class Score4WindowStrategy(IStrategy):
         current_profit: float,
         **kwargs,
     ) -> str | bool | None:
-        """Exit when pair drops out of the refreshed top-N (if enabled)."""
+        """
+        Top-15 drop exit is OFF by default (Phase A policy).
+
+        Open trades must NOT close merely because a pair left the active
+        Top-15. ROI / stoploss / strategy exits continue to apply.
+
+        Opt-in only when active_universe.exit_when_dropped is explicitly true.
+        """
         state = getattr(self, "_active_universe", None)
         if state is None or not state.enabled or not state.exit_when_dropped:
             return None
