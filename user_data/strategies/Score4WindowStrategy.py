@@ -10,7 +10,7 @@ Optional confirmation filters are OFF by default so baseline entry is preserved.
 Position sizing (always on):
   size_pct = (total_score * risk_pct) / atr_pct
   stake    = wallet * size_pct / 100
-where atr_pct is computed by the strategy and risk_pct defaults to 2.
+where atr_pct is computed by the strategy and risk_pct defaults to 3.
 """
 
 from datetime import datetime
@@ -21,13 +21,15 @@ import talib.abstract as ta
 
 from freqtrade.strategy import IStrategy, IntParameter, DecimalParameter
 
+from score4window_scoring import apply_score4window_scores
+
 
 class Score4WindowStrategy(IStrategy):
     """
     Strategy ID: SCORE_4WINDOW_V1
 
     Entry: total_score >= entry_score_threshold (default 2).
-    Stake: (score * risk%) / ATR% of wallet. risk% default = 2.
+    Stake: (score * risk%) / ATR% of wallet. risk% default = 3.
     """
 
     STRATEGY_ID = "SCORE_4WINDOW_V1"
@@ -39,7 +41,7 @@ class Score4WindowStrategy(IStrategy):
     WINDOW_1M = 21
     WINDOW_2M = 42
     ENTRY_SCORE_THRESHOLD = 2
-    RISK_PCT = 2.0
+    RISK_PCT = 3.0
 
     window_1w = IntParameter(1, 30, default=WINDOW_1W, space="buy", optimize=False, load=True)
     window_2w = IntParameter(2, 60, default=WINDOW_2W, space="buy", optimize=False, load=True)
@@ -144,10 +146,36 @@ class Score4WindowStrategy(IStrategy):
             needed.append(int(self.fib_lookback.value) + 1)
         self.startup_candle_count = max(needed)
 
+        # Observation-only score scan. Never places orders / never flips dry_run.
+        # Force executes on first bot_loop_start (after OHLCV is available).
+        mode = str((self.config or {}).get("score_scan", "off")).lower()
+        self._score_scan_force_pending = mode == "force"
+
+    def bot_loop_start(self, current_time: datetime, **kwargs) -> None:
+        """Observation score scan — does not create or cancel orders."""
+        try:
+            mode = str((self.config or {}).get("score_scan", "off")).lower()
+            if mode == "off":
+                return
+            from score_scan.engine import run_score_scan
+
+            if mode == "force" and getattr(self, "_score_scan_force_pending", False):
+                run_score_scan(self, self.config or {}, mode="force", now=current_time)
+                self._score_scan_force_pending = False
+            elif mode == "hourly":
+                run_score_scan(self, self.config or {}, mode="hourly", now=current_time)
+        except Exception:
+            import logging
+            logging.getLogger(__name__).exception(
+                "score_scan: scan failed (continuing dry-run)"
+            )
+
     @staticmethod
     def _window_score(dataframe: DataFrame, lookback: int) -> Series:
-        historical = dataframe["close"].shift(lookback)
-        return np.sign(dataframe["close"] - historical)
+        # Delegate to shared authoritative scorer (kept for callers/tests).
+        from score4window_scoring import window_score
+
+        return window_score(dataframe["close"], lookback)
 
     @staticmethod
     def calc_position_size_pct(
@@ -161,7 +189,7 @@ class Score4WindowStrategy(IStrategy):
         """
         size_pct = (score * risk_pct) / atr_pct
 
-        Example: score=2, risk=2, atr_pct=4 → 1.0 (% of wallet)
+        Example: score=2, risk=3, atr_pct=4 → 1.5 (% of wallet)
         """
         if score is None or np.isnan(score) or score <= 0:
             return 0.0
@@ -177,15 +205,13 @@ class Score4WindowStrategy(IStrategy):
         w3 = int(self.window_1m.value)
         w4 = int(self.window_2m.value)
 
-        dataframe["score_1w"] = self._window_score(dataframe, w1)
-        dataframe["score_2w"] = self._window_score(dataframe, w2)
-        dataframe["score_1m"] = self._window_score(dataframe, w3)
-        dataframe["score_2m"] = self._window_score(dataframe, w4)
-        dataframe["total_score"] = (
-            dataframe["score_1w"]
-            + dataframe["score_2w"]
-            + dataframe["score_1m"]
-            + dataframe["score_2m"]
+        # Authoritative score math (shared with score_scan).
+        dataframe = apply_score4window_scores(
+            dataframe,
+            window_1w=w1,
+            window_2w=w2,
+            window_1m=w3,
+            window_2m=w4,
         )
 
         # Volatility for position sizing (always computed)
@@ -289,7 +315,7 @@ class Score4WindowStrategy(IStrategy):
         """
         stake = wallet * (score * risk_pct / atr_pct) / 100
 
-        ATR% is computed by the strategy. risk_pct defaults to 2.
+        ATR% is computed by the strategy. risk_pct defaults to 3.
         """
         if self.dp is None:
             return proposed_stake
