@@ -18,8 +18,10 @@ def assert_max_open_trades_research_safe(config: dict[str, Any]) -> None:
     """
     Freqtrade forbids max_open_trades=-1 together with stake_amount=unlimited.
 
-    For dry-run research we use a high finite cap (e.g. 1000)
-    so stake_amount can stay unlimited for risk_pct sizing.
+    For dry-run research we use a very high finite cap (e.g. 1_000_000) so
+    stuck/unfilled open trades cannot exhaust entry slots, while
+    stake_amount stays unlimited for risk_pct sizing. New entries are still
+    limited by active_universe top_n (default 15), not by this slot cap.
 
     max_open_trades=-1 remains dry-run-only if ever used with a fixed stake.
     """
@@ -29,8 +31,8 @@ def assert_max_open_trades_research_safe(config: dict[str, Any]) -> None:
     if max_ot == -1 and stake_unlimited:
         raise RuntimeError(
             "safety abort: max_open_trades and stake_amount cannot both be "
-            "unlimited (Freqtrade). Use a finite max_open_trades (e.g. 100) "
-            "when stake_amount='unlimited'."
+            "unlimited (Freqtrade). Use a finite max_open_trades "
+            "(e.g. 1000000) when stake_amount='unlimited'."
         )
     if max_ot == -1 and config.get("dry_run") is not True:
         raise RuntimeError(

@@ -111,7 +111,9 @@ def test_write_report(tmp_path: Path):
 
 def test_config_active_universe_and_slot_cap():
     cfg = json.loads(Path("user_data/config.json").read_text())
-    assert cfg.get("max_open_trades") == 100
+    # Slot ceiling is intentionally huge so stuck open trades cannot block
+    # new Top-15 entries; active_universe.top_n is the real pre-filter.
+    assert cfg.get("max_open_trades") == 1_000_000
     assert cfg.get("stake_amount") == "unlimited"
     block = cfg.get("active_universe") or {}
     assert block.get("enabled") is True
@@ -120,7 +122,7 @@ def test_config_active_universe_and_slot_cap():
     assert block.get("exit_when_dropped") is True
 
     uni = json.loads(Path("user_data/config_binance_universe100.json").read_text())
-    assert uni.get("max_open_trades") == 100
+    assert uni.get("max_open_trades") == 1_000_000
     assert (uni.get("active_universe") or {}).get("top_n") == 15
 
 
