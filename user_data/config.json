@@ -7,15 +7,15 @@
     "fiat_display_currency": "USD",
     "timeframe": "1d",
     "dry_run": true,
-    "cancel_open_orders_on_exit": false,
+    "cancel_open_orders_on_exit": true,
     "unfilledtimeout": {
-        "entry": 10,
+        "entry": 5,
         "exit": 10,
         "exit_timeout_count": 0,
         "unit": "minutes"
     },
     "entry_pricing": {
-        "price_side": "same",
+        "price_side": "other",
         "use_order_book": false,
         "order_book_top": 1,
         "price_last_balance": 0.0,
