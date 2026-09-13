@@ -1,6 +1,6 @@
 {
     "$schema": "https://schema.freqtrade.io/schema.json",
-    "max_open_trades": 5,
+    "max_open_trades": 30,
     "stake_currency": "USDT",
     "stake_amount": "unlimited",
     "tradable_balance_ratio": 0.99,
@@ -148,7 +148,8 @@
         "pair_blacklist": [
             ".*(UP|DOWN|BULL|BEAR)/.*",
             ".*[0-9]+[LS]/.*"
-        ]
+        ],
+        "enable_ws": false
     },
     "pairlists": [
         {
