@@ -8,6 +8,9 @@ user_data/baseline_results/
 user_data/hyperopt_results/
 user_data/hyperopts/
 user_data/freqaimodels/
+user_data/models/
+user_data/freqai_leaderboard_results/
+user_data/freqai_shortterm_results/
 user_data/notebooks/
 user_data/plot/
 user_data/data/**/*.feather

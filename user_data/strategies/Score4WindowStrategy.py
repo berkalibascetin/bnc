@@ -95,7 +95,17 @@ class Score4WindowStrategy(IStrategy):
 
     minimal_roi = {"0": 0.10}
     stoploss = -0.10
+    # Built-in trailing stays off; profit lock uses custom_stoploss below.
     trailing_stop = False
+    use_custom_stoploss = True
+    # After peak unrealized profit reaches this, lock stop at keep_fraction of peak.
+    # Example: peak +6% → stop at +3% (half the gain protected).
+    TRAIL_ACTIVATE_PROFIT = 0.02
+    TRAIL_KEEP_FRACTION = 0.5
+    # If risk-sized stake < exchange min: bump to min only when pair is in
+    # active top-N, or stake is within this fraction of min (else skip = 0).
+    # 0.77 ≈ Freqtrade wallets 1.3x cap (stake * 1.3 >= min_stake).
+    MIN_STAKE_NEAR_RATIO = 0.77
 
     timeframe = "1d"
     process_only_new_candles = True
@@ -221,6 +231,13 @@ class Score4WindowStrategy(IStrategy):
             return True
         # Before first successful refresh, block entries (avoid trading full 100).
         if not state.pairs:
+            return False
+        return pair in state.as_set()
+
+    def _pair_in_ranked_top_n(self, pair: str) -> bool:
+        """True only when active-universe is on and pair is in the current top-N."""
+        state = getattr(self, "_active_universe", None)
+        if state is None or not state.enabled or not state.pairs:
             return False
         return pair in state.as_set()
 
@@ -369,17 +386,88 @@ class Score4WindowStrategy(IStrategy):
         side: str,
         **kwargs,
     ) -> bool:
-        """Hard gate: only current top-N may open (pre-AI volume control)."""
-        allowed = self._pair_in_active_universe(pair)
-        if not allowed:
-            import logging
+        """Hard gate: only current top-N may open; never stack a second open on same pair."""
+        import logging
 
-            logging.getLogger(__name__).info(
+        log = logging.getLogger(__name__)
+        if not self._pair_in_active_universe(pair):
+            log.info(
                 "active_universe: skip entry %s (not in current top-%s)",
                 pair,
                 getattr(getattr(self, "_active_universe", None), "top_n", "?"),
             )
-        return allowed
+            return False
+
+        # Dry-run wallets keep only ONE balance per base currency. A second open
+        # on the same pair overwrites the first in the wallet → exit failures
+        # ("Not enough X in wallet"). Block stacking even if two bot instances race.
+        try:
+            from freqtrade.persistence import Trade
+
+            existing = Trade.get_trades_proxy(pair=pair, is_open=True)
+            if existing:
+                log.warning(
+                    "skip entry %s: already %s open trade(s) on this pair (no stacking)",
+                    pair,
+                    len(existing),
+                )
+                return False
+        except Exception:
+            log.exception("confirm_trade_entry: open-trade check failed for %s", pair)
+            return False
+
+        return True
+
+    @staticmethod
+    def calc_profit_protect_stoploss(
+        open_rate: float,
+        current_rate: float,
+        max_rate: float,
+        *,
+        hard_stoploss: float = -0.10,
+        activate_profit: float = 0.02,
+        keep_fraction: float = 0.5,
+    ) -> float:
+        """
+        Hard -stoploss until peak profit hits activate_profit; then lock a stop
+        at keep_fraction of peak unrealized profit (relative to open_rate).
+
+        Return value is relative to current_rate (Freqtrade custom_stoploss).
+        """
+        if open_rate <= 0 or current_rate <= 0:
+            return hard_stoploss
+
+        peak_rate = max(float(max_rate or current_rate), open_rate)
+        peak_profit = (peak_rate / open_rate) - 1.0
+        if peak_profit < activate_profit:
+            return hard_stoploss
+
+        desired_stop_rate = open_rate * (1.0 + peak_profit * keep_fraction)
+        return (desired_stop_rate / current_rate) - 1.0
+
+    def custom_stoploss(
+        self,
+        pair: str,
+        trade: Any,
+        current_time: datetime,
+        current_rate: float,
+        current_profit: float,
+        after_fill: bool,
+        **kwargs,
+    ) -> float | None:
+        """
+        Profit protection: once peak gain >= TRAIL_ACTIVATE_PROFIT, trail so
+        that giving back half the peak profit exits (keeps the other half).
+        Until activation, hard stoploss (-10%) applies.
+        """
+        return self.calc_profit_protect_stoploss(
+            float(trade.open_rate),
+            float(current_rate),
+            float(getattr(trade, "max_rate", None) or current_rate),
+            hard_stoploss=float(self.stoploss),
+            activate_profit=float(self.TRAIL_ACTIVATE_PROFIT),
+            keep_fraction=float(self.TRAIL_KEEP_FRACTION),
+        )
 
     def custom_exit(
         self,
@@ -400,6 +488,34 @@ class Score4WindowStrategy(IStrategy):
             return "dropped_from_top15"
         return None
 
+    @staticmethod
+    def resolve_stake_against_min(
+        stake: float,
+        min_stake: float | None,
+        *,
+        in_top_n: bool,
+        near_ratio: float = 0.77,
+    ) -> float:
+        """
+        Exchange min-stake gate.
+
+        - stake >= min → keep stake
+        - stake < min and (in top-N OR stake >= min * near_ratio) → bump to min
+        - otherwise → 0 (skip trade)
+        """
+        if min_stake is None or min_stake <= 0:
+            return float(stake)
+        stake_f = float(stake)
+        min_f = float(min_stake)
+        if stake_f >= min_f:
+            return stake_f
+        if stake_f <= 0:
+            return 0.0
+        near = near_ratio > 0 and stake_f >= (min_f * float(near_ratio))
+        if in_top_n or near:
+            return min_f
+        return 0.0
+
     def custom_stake_amount(
         self,
         pair: str,
@@ -417,6 +533,7 @@ class Score4WindowStrategy(IStrategy):
         stake = wallet * (score * risk_pct / atr_pct) / 100
 
         ATR% is computed by the strategy. risk_pct defaults to 3.
+        Below exchange min_stake: bump only for top-N / near-min; else skip.
         """
         if self.dp is None:
             return proposed_stake
@@ -450,6 +567,39 @@ class Score4WindowStrategy(IStrategy):
 
         stake = capital * (size_pct / 100.0)
         stake = min(stake, float(max_stake))
-        if min_stake is not None:
-            stake = max(float(min_stake), stake)
-        return stake
+        in_top = self._pair_in_ranked_top_n(pair)
+        resolved = self.resolve_stake_against_min(
+            stake,
+            min_stake,
+            in_top_n=in_top,
+            near_ratio=float(self.MIN_STAKE_NEAR_RATIO),
+        )
+        if (
+            min_stake is not None
+            and stake < float(min_stake)
+            and resolved == 0.0
+        ):
+            import logging
+
+            logging.getLogger(__name__).info(
+                "min_stake: skip %s (sized %.4f < min %.4f, not top-N and not near %.0f%%)",
+                pair,
+                stake,
+                float(min_stake),
+                float(self.MIN_STAKE_NEAR_RATIO) * 100.0,
+            )
+        elif (
+            min_stake is not None
+            and stake < float(min_stake)
+            and resolved >= float(min_stake)
+        ):
+            import logging
+
+            logging.getLogger(__name__).info(
+                "min_stake: bump %s %.4f → %.4f (top_n=%s)",
+                pair,
+                stake,
+                resolved,
+                in_top,
+            )
+        return resolved
