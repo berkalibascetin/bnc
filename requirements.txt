@@ -4,3 +4,11 @@ freqtrade>=2024.1
 pytest>=7.0
 pandas>=2.0
 numpy>=1.24
+# FreqAI leaderboard extras
+catboost>=1.2
+lightgbm>=4.0
+xgboost>=2.0
+datasieve>=0.1
+# joblib>=1.5 removed vendored cloudpickle; FreqAI still imports joblib.externals.cloudpickle
+joblib==1.4.2
+cloudpickle>=3.0

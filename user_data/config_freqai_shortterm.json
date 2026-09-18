@@ -5,7 +5,7 @@
     "stake_amount": "unlimited",
     "tradable_balance_ratio": 0.99,
     "fiat_display_currency": "USD",
-    "timeframe": "1d",
+    "timeframe": "1h",
     "dry_run": true,
     "cancel_open_orders_on_exit": false,
     "unfilledtimeout": {
@@ -70,15 +70,56 @@
         "listen_ip_address": "127.0.0.1",
         "listen_port": 8080,
         "verbosity": "error",
-        "jwt_secret_key": "score4window-v1-dev-only-secret-key-32chars",
+        "jwt_secret_key": "score4window-freqai-shortterm-secret-key",
         "CORS_origins": [],
         "username": "freqtrader",
         "password": "changeme"
     },
-    "bot_name": "score4window-baseline5",
+    "bot_name": "freqai-shortterm-research",
     "initial_state": "running",
     "force_entry_enable": false,
     "internals": {
         "process_throttle_secs": 5
+    },
+    "freqai": {
+        "enabled": true,
+        "purge_old_models": 2,
+        "train_period_days": 120,
+        "backtest_period_days": 30,
+        "live_retrain_hours": 0,
+        "identifier": "st-placeholder",
+        "fit_live_predictions_candles": 0,
+        "activate_tensorboard": false,
+        "feature_parameters": {
+            "include_timeframes": [
+                "1h"
+            ],
+            "include_corr_pairlist": [
+                "BTC/USDT",
+                "ETH/USDT"
+            ],
+            "label_period_candles": 24,
+            "include_shifted_candles": 1,
+            "DI_threshold": 0,
+            "weight_factor": 0.9,
+            "principal_component_analysis": false,
+            "use_SVM_to_remove_outliers": false,
+            "indicator_periods_candles": [
+                5,
+                10,
+                21
+            ]
+        },
+        "data_split_parameters": {
+            "test_size": 0.15,
+            "random_state": 1,
+            "shuffle": false
+        },
+        "model_training_parameters": {
+            "n_estimators": 120,
+            "learning_rate": 0.05,
+            "iterations": 120,
+            "verbose": 0
+        }
     }
 }

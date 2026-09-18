@@ -1,0 +1,227 @@
+{
+  "generated_at": "2026-09-13T12:25:39.588830+00:00",
+  "timerange": "20260301-20260901",
+  "timeframe": "1d",
+  "pairs": [
+    "BTC/USDT",
+    "ETH/USDT",
+    "SOL/USDT",
+    "BNB/USDT",
+    "XRP/USDT"
+  ],
+  "notes": [
+    "Same ROI 10% / stoploss -10% / 1d / 5 Binance majors for all runs.",
+    "FreqAI: train_period_days=120, backtest_period_days=30, label_period=5.",
+    "CatBoost models vendored into user_data/freqaimodels (removed upstream in FT 2026.x).",
+    "Exploratory leaderboard; daily sample size is small for ML confidence."
+  ],
+  "leaderboard": [
+    {
+      "id": "baseline_score4window",
+      "label": "Score4Window (AI-siz)",
+      "strategy": "Score4WindowStrategy",
+      "freqaimodel": null,
+      "family": "baseline",
+      "status": "ok",
+      "error": null,
+      "result_file": "C:\\Users\\berka\\projeler\\bnc\\user_data\\freqai_leaderboard_results\\baseline_score4window\\backtest-result-2026-09-13_12-21-17.zip",
+      "duration_sec": 6.5,
+      "metrics": {
+        "total_trades": 41,
+        "win_rate_pct": 58.54,
+        "profit_pct": 2.555,
+        "profit_abs": 25.549832439999996,
+        "profit_factor": 1.8614508616170018,
+        "max_drawdown_pct": 1.2077,
+        "sharpe": 1.1216396961743307,
+        "sortino": 2.5123185128425147,
+        "expectancy": 0.6231666448780488
+      },
+      "rank": 1
+    },
+    {
+      "id": "lightgbm_multitarget_hybrid",
+      "label": "LightGBM MultiTarget Hybrid",
+      "strategy": "Score4FreqaiMultiTargetHybrid",
+      "freqaimodel": "LightGBMClassifierMultiTarget",
+      "family": "multitarget",
+      "status": "ok",
+      "error": null,
+      "result_file": "C:\\Users\\berka\\projeler\\bnc\\user_data\\freqai_leaderboard_results\\lightgbm_multitarget_hybrid\\backtest-result-2026-09-13_12-25-38.zip",
+      "duration_sec": 10.9,
+      "metrics": {
+        "total_trades": 59,
+        "win_rate_pct": 59.32,
+        "profit_pct": 1.7959,
+        "profit_abs": 17.959051079999995,
+        "profit_factor": 1.0689720508066414,
+        "max_drawdown_pct": 15.1566,
+        "sharpe": 0.15562825945989953,
+        "sortino": 0.22469481996675503,
+        "expectancy": 0.3043906962711871
+      },
+      "rank": 2
+    },
+    {
+      "id": "xgboost_classifier_hybrid",
+      "label": "XGBoost Classifier Hybrid",
+      "strategy": "Score4FreqaiClassifierHybrid",
+      "freqaimodel": "XGBoostClassifier",
+      "family": "classifier",
+      "status": "ok",
+      "error": null,
+      "result_file": "C:\\Users\\berka\\projeler\\bnc\\user_data\\freqai_leaderboard_results\\xgboost_classifier_hybrid\\backtest-result-2026-09-13_12-21-55.zip",
+      "duration_sec": 15.3,
+      "metrics": {
+        "total_trades": 83,
+        "win_rate_pct": 55.42,
+        "profit_pct": -1.6392,
+        "profit_abs": -16.391796149999994,
+        "profit_factor": 0.9606054412840649,
+        "max_drawdown_pct": 19.6915,
+        "sharpe": -0.1378173039170324,
+        "sortino": -0.20394186635867884,
+        "expectancy": -0.19749151987951663
+      },
+      "rank": 3
+    },
+    {
+      "id": "lightgbm_classifier_hybrid",
+      "label": "LightGBM Classifier Hybrid",
+      "strategy": "Score4FreqaiClassifierHybrid",
+      "freqaimodel": "LightGBMClassifier",
+      "family": "classifier",
+      "status": "ok",
+      "error": null,
+      "result_file": "C:\\Users\\berka\\projeler\\bnc\\user_data\\freqai_leaderboard_results\\lightgbm_classifier_hybrid\\backtest-result-2026-09-13_12-21-40.zip",
+      "duration_sec": 9.6,
+      "metrics": {
+        "total_trades": 89,
+        "win_rate_pct": 53.93,
+        "profit_pct": -2.7382,
+        "profit_abs": -27.38188629000001,
+        "profit_factor": 0.9355824151518404,
+        "max_drawdown_pct": 23.6825,
+        "sharpe": -0.24174706581668648,
+        "sortino": -0.33664941234868967,
+        "expectancy": -0.30766164370786697
+      },
+      "rank": 4
+    },
+    {
+      "id": "catboost_multiclass_hybrid",
+      "label": "CatBoost MultiClass Hybrid",
+      "strategy": "Score4FreqaiClassifierHybrid",
+      "freqaimodel": "CatboostClassifier",
+      "family": "classifier",
+      "status": "ok",
+      "error": null,
+      "result_file": "C:\\Users\\berka\\projeler\\bnc\\user_data\\freqai_leaderboard_results\\catboost_multiclass_hybrid\\backtest-result-2026-09-13_12-21-24.zip",
+      "duration_sec": 7.5,
+      "metrics": {
+        "total_trades": 87,
+        "win_rate_pct": 50.57,
+        "profit_pct": -5.0284,
+        "profit_abs": -50.28394275000001,
+        "profit_factor": 0.8755548569254974,
+        "max_drawdown_pct": 22.8938,
+        "sharpe": -0.45223339639973403,
+        "sortino": -0.6502366707736638,
+        "expectancy": -0.5779763534482747
+      },
+      "rank": 5
+    },
+    {
+      "id": "catboost_regressor",
+      "label": "CatBoost Regressor",
+      "strategy": "Score4FreqaiRegressor",
+      "freqaimodel": "CatboostRegressor",
+      "family": "regressor",
+      "status": "ok",
+      "error": null,
+      "result_file": "C:\\Users\\berka\\projeler\\bnc\\user_data\\freqai_leaderboard_results\\catboost_regressor\\backtest-result-2026-09-13_12-23-08.zip",
+      "duration_sec": 37.9,
+      "metrics": {
+        "total_trades": 13,
+        "win_rate_pct": 38.46,
+        "profit_pct": -6.4009,
+        "profit_abs": -64.00926636999999,
+        "profit_factor": 0.5373629548303387,
+        "max_drawdown_pct": 8.2921,
+        "sharpe": -0.3927616918768741,
+        "sortino": -1.059819366776658,
+        "expectancy": -4.923789720769229
+      },
+      "rank": 6
+    },
+    {
+      "id": "catboost_multitarget_hybrid",
+      "label": "CatBoost MultiTarget Hybrid",
+      "strategy": "Score4FreqaiMultiTargetHybrid",
+      "freqaimodel": "CatboostClassifierMultiTarget",
+      "family": "multitarget",
+      "status": "ok",
+      "error": null,
+      "result_file": "C:\\Users\\berka\\projeler\\bnc\\user_data\\freqai_leaderboard_results\\catboost_multitarget_hybrid\\backtest-result-2026-09-13_12-25-27.zip",
+      "duration_sec": 113.0,
+      "metrics": {
+        "total_trades": 54,
+        "win_rate_pct": 48.15,
+        "profit_pct": -6.576,
+        "profit_abs": -65.76031495999999,
+        "profit_factor": 0.7600594943878802,
+        "max_drawdown_pct": 17.586,
+        "sharpe": -0.5787531992203101,
+        "sortino": -0.8638892591054333,
+        "expectancy": -1.2177836103703714
+      },
+      "rank": 7
+    },
+    {
+      "id": "xgboost_regressor",
+      "label": "XGBoost Regressor",
+      "strategy": "Score4FreqaiRegressor",
+      "freqaimodel": "XGBoostRegressor",
+      "family": "regressor",
+      "status": "ok",
+      "error": null,
+      "result_file": "C:\\Users\\berka\\projeler\\bnc\\user_data\\freqai_leaderboard_results\\xgboost_regressor\\backtest-result-2026-09-13_12-22-30.zip",
+      "duration_sec": 25.2,
+      "metrics": {
+        "total_trades": 48,
+        "win_rate_pct": 45.83,
+        "profit_pct": -11.1401,
+        "profit_abs": -111.40052184000001,
+        "profit_factor": 0.6931600019009921,
+        "max_drawdown_pct": 20.7951,
+        "sharpe": -0.8093706900703671,
+        "sortino": -1.7813766219203622,
+        "expectancy": -2.320844205
+      },
+      "rank": 8
+    },
+    {
+      "id": "lightgbm_regressor",
+      "label": "LightGBM Regressor (classic)",
+      "strategy": "Score4FreqaiRegressor",
+      "freqaimodel": "LightGBMRegressor",
+      "family": "regressor",
+      "status": "ok",
+      "error": null,
+      "result_file": "C:\\Users\\berka\\projeler\\bnc\\user_data\\freqai_leaderboard_results\\lightgbm_regressor\\backtest-result-2026-09-13_12-22-05.zip",
+      "duration_sec": 9.4,
+      "metrics": {
+        "total_trades": 44,
+        "win_rate_pct": 47.73,
+        "profit_pct": -13.1375,
+        "profit_abs": -131.37502492,
+        "profit_factor": 0.5485479317024092,
+        "max_drawdown_pct": 18.4011,
+        "sharpe": -1.1002497379340503,
+        "sortino": -1.8000233664821144,
+        "expectancy": -2.985796020909091
+      },
+      "rank": 9
+    }
+  ]
+}

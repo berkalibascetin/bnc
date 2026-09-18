@@ -345,3 +345,100 @@ class TestScore4WindowPositionSizing:
         assert strategy.calc_position_size_pct(0, 2.0, 4.0) == 0.0
         assert strategy.calc_position_size_pct(2, 2.0, 0.0) == 0.0
         assert strategy.calc_position_size_pct(float("nan"), 2.0, 4.0) == 0.0
+
+
+class TestScore4WindowMinStakeGate:
+    def test_above_min_unchanged(self, strategy):
+        assert strategy.resolve_stake_against_min(12.0, 10.0, in_top_n=False) == 12.0
+
+    def test_below_min_top_n_bumps(self, strategy):
+        assert strategy.resolve_stake_against_min(3.0, 10.0, in_top_n=True) == 10.0
+
+    def test_below_min_near_bumps(self, strategy):
+        # 8.0 >= 10 * 0.77 → bump
+        assert strategy.resolve_stake_against_min(
+            8.0, 10.0, in_top_n=False, near_ratio=0.77
+        ) == 10.0
+
+    def test_far_below_min_skips(self, strategy):
+        assert strategy.resolve_stake_against_min(
+            2.0, 10.0, in_top_n=False, near_ratio=0.77
+        ) == 0.0
+
+    def test_no_min_passthrough(self, strategy):
+        assert strategy.resolve_stake_against_min(4.0, None, in_top_n=False) == 4.0
+
+
+class TestScore4WindowNoPairStacking:
+    def test_blocks_second_open_on_same_pair(self, strategy, monkeypatch):
+        from datetime import datetime, timezone
+
+        class _T:
+            pass
+
+        monkeypatch.setattr(
+            "freqtrade.persistence.Trade.get_trades_proxy",
+            lambda **kwargs: [_T()],
+        )
+        ok = strategy.confirm_trade_entry(
+            pair="JST/USDT",
+            order_type="market",
+            amount=100.0,
+            rate=0.1,
+            time_in_force="GTC",
+            current_time=datetime.now(timezone.utc),
+            entry_tag="score_4",
+            side="long",
+        )
+        assert ok is False
+
+    def test_allows_entry_when_no_open(self, strategy, monkeypatch):
+        from datetime import datetime, timezone
+
+        monkeypatch.setattr(
+            "freqtrade.persistence.Trade.get_trades_proxy",
+            lambda **kwargs: [],
+        )
+        ok = strategy.confirm_trade_entry(
+            pair="JST/USDT",
+            order_type="market",
+            amount=100.0,
+            rate=0.1,
+            time_in_force="GTC",
+            current_time=datetime.now(timezone.utc),
+            entry_tag="score_4",
+            side="long",
+        )
+        assert ok is True
+
+
+class TestScore4WindowProfitProtectStoploss:
+    def test_hard_stoploss_before_activation(self, strategy):
+        # Peak +1% < 2% activate → keep hard -10% relative return value
+        sl = strategy.calc_profit_protect_stoploss(
+            open_rate=100.0,
+            current_rate=100.5,
+            max_rate=101.0,
+            hard_stoploss=-0.10,
+            activate_profit=0.02,
+            keep_fraction=0.5,
+        )
+        assert sl == -0.10
+
+    def test_locks_half_of_peak_profit(self, strategy):
+        # Peak +6% → desired stop at +3% of open (= 103). At current 105:
+        # relative = 103/105 - 1
+        sl = strategy.calc_profit_protect_stoploss(
+            open_rate=100.0,
+            current_rate=105.0,
+            max_rate=106.0,
+            hard_stoploss=-0.10,
+            activate_profit=0.02,
+            keep_fraction=0.5,
+        )
+        assert sl == pytest.approx((103.0 / 105.0) - 1.0)
+
+    def test_flag_enabled(self, strategy):
+        assert strategy.use_custom_stoploss is True
+        assert strategy.TRAIL_KEEP_FRACTION == 0.5
+        assert strategy.TRAIL_ACTIVATE_PROFIT == 0.02

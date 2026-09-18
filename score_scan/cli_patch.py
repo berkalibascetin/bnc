@@ -20,14 +20,25 @@ logger = logging.getLogger(__name__)
 _PATCHED = False
 
 
+_FREQTRADE_MISSING_MSG = (
+    "freqtrade bu Python ortamında kurulu değil (venv aktif değil olabilir). "
+    "Windows PowerShell: "
+    ".\\.venv\\Scripts\\python.exe -m score_scan trade -c user_data/config.json "
+    "--userdir user_data --strategy Score4WindowStrategy --score-scan hourly"
+)
+
+
 def apply_freqtrade_cli_patch() -> None:
     """Idempotently add --score-scan to Freqtrade trade arguments."""
     global _PATCHED
     if _PATCHED:
         return
 
-    from freqtrade.commands.arguments import ARGS_TRADE
-    from freqtrade.commands.cli_options import AVAILABLE_CLI_OPTIONS, Arg
+    try:
+        from freqtrade.commands.arguments import ARGS_TRADE
+        from freqtrade.commands.cli_options import AVAILABLE_CLI_OPTIONS, Arg
+    except ImportError as exc:
+        raise ImportError(_FREQTRADE_MISSING_MSG) from exc
 
     if "score_scan" not in AVAILABLE_CLI_OPTIONS:
         AVAILABLE_CLI_OPTIONS["score_scan"] = Arg(
@@ -88,11 +99,19 @@ def inject_score_scan_into_config(config: dict[str, Any], args: dict[str, Any] |
 
 def main(argv: list[str] | None = None) -> int:
     """CLI entry: patch Freqtrade then dispatch to freqtrade.main."""
-    apply_freqtrade_cli_patch()
+    try:
+        apply_freqtrade_cli_patch()
+    except ImportError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
     argv = list(sys.argv[1:] if argv is None else argv)
     # freqtrade.main reads sys.argv
     sys.argv = ["freqtrade", *argv]
-    from freqtrade import main as ft_main
+    try:
+        from freqtrade import main as ft_main
+    except ImportError:
+        print(_FREQTRADE_MISSING_MSG, file=sys.stderr)
+        return 1
 
     return int(ft_main.main() or 0)
 
