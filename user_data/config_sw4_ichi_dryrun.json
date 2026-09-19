@@ -166,11 +166,11 @@
         "listen_ip_address": "127.0.0.1",
         "listen_port": 8080,
         "verbosity": "error",
-        "jwt_secret_key": "change-me",
+        "jwt_secret_key": "9572630c8cfb8537ae56924d5704ee7f432b722c398d05bc",
         "CORS_origins": [],
         "username": "freqtrader",
         "password": "changeme",
-        "ws_token": "change-me"
+        "ws_token": "1c7604be3aae7993179622d757426e40"
     },
     "bot_name": "score4window-ichi-dryrun",
     "initial_state": "running",
