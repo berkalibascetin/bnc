@@ -1,0 +1,192 @@
+{
+    "$schema": "https://schema.freqtrade.io/schema.json",
+    "max_open_trades": 1000000,
+    "stake_currency": "USDT",
+    "stake_amount": "unlimited",
+    "tradable_balance_ratio": 0.99,
+    "fiat_display_currency": "USD",
+    "timeframe": "1d",
+    "dry_run": true,
+    "cancel_open_orders_on_exit": true,
+    "unfilledtimeout": {
+        "entry": 5,
+        "exit": 10,
+        "exit_timeout_count": 0,
+        "unit": "minutes"
+    },
+    "entry_pricing": {
+        "price_side": "other",
+        "use_order_book": false,
+        "order_book_top": 1,
+        "price_last_balance": 0.0,
+        "check_depth_of_market": {
+            "enabled": false,
+            "bids_to_ask_delta": 1
+        }
+    },
+    "exit_pricing": {
+        "price_side": "other",
+        "use_order_book": false,
+        "order_book_top": 1
+    },
+    "exchange": {
+        "name": "binance",
+        "key": "",
+        "secret": "",
+        "ccxt_config": {
+            "options": {
+                "defaultType": "spot"
+            }
+        },
+        "ccxt_async_config": {
+            "options": {
+                "defaultType": "spot"
+            }
+        },
+        "pair_whitelist": [
+            "BTC/USDT",
+            "ETH/USDT",
+            "SOL/USDT",
+            "BNB/USDT",
+            "XRP/USDT",
+            "ZEC/USDT",
+            "NEAR/USDT",
+            "SUI/USDT",
+            "DOGE/USDT",
+            "UNI/USDT",
+            "ENA/USDT",
+            "TRX/USDT",
+            "ADA/USDT",
+            "LINK/USDT",
+            "PEPE/USDT",
+            "TAO/USDT",
+            "AVAX/USDT",
+            "RAY/USDT",
+            "ARB/USDT",
+            "WLD/USDT",
+            "REZ/USDT",
+            "ETHFI/USDT",
+            "DASH/USDT",
+            "BCH/USDT",
+            "LTC/USDT",
+            "XLM/USDT",
+            "PAXG/USDT",
+            "TRUMP/USDT",
+            "AAVE/USDT",
+            "DOT/USDT",
+            "SOPH/USDT",
+            "ONDO/USDT",
+            "INJ/USDT",
+            "FET/USDT",
+            "PENGU/USDT",
+            "POL/USDT",
+            "LSK/USDT",
+            "MINA/USDT",
+            "APT/USDT",
+            "FIL/USDT",
+            "HBAR/USDT",
+            "AERO/USDT",
+            "BLUR/USDT",
+            "ZRO/USDT",
+            "ZEN/USDT",
+            "CAKE/USDT",
+            "PROM/USDT",
+            "SHIB/USDT",
+            "PENDLE/USDT",
+            "TIA/USDT",
+            "ICP/USDT",
+            "THETA/USDT",
+            "DOGS/USDT",
+            "MORPHO/USDT",
+            "IOST/USDT",
+            "CHZ/USDT",
+            "JST/USDT",
+            "RENDER/USDT",
+            "OP/USDT",
+            "EIGEN/USDT",
+            "VIRTUAL/USDT",
+            "ALGO/USDT",
+            "WBTC/USDT",
+            "TREE/USDT",
+            "ETC/USDT",
+            "SEI/USDT",
+            "ATOM/USDT",
+            "COTI/USDT",
+            "CRV/USDT",
+            "LDO/USDT",
+            "BONK/USDT",
+            "JTO/USDT",
+            "STRK/USDT",
+            "BERA/USDT",
+            "VET/USDT",
+            "WIF/USDT",
+            "RUNE/USDT",
+            "ORDI/USDT",
+            "STX/USDT",
+            "PYTH/USDT",
+            "EGLD/USDT",
+            "FLOKI/USDT",
+            "AR/USDT",
+            "LUNC/USDT",
+            "ENS/USDT",
+            "XTZ/USDT",
+            "DYDX/USDT",
+            "QNT/USDT",
+            "SAND/USDT",
+            "AXS/USDT",
+            "COMP/USDT",
+            "NEO/USDT",
+            "IOTA/USDT",
+            "GRT/USDT",
+            "SNX/USDT",
+            "NOT/USDT",
+            "FLOW/USDT",
+            "IMX/USDT",
+            "MANA/USDT",
+            "GMX/USDT"
+        ],
+        "pair_blacklist": [
+            ".*(UP|DOWN|BULL|BEAR)/.*",
+            ".*[0-9]+[LS]/.*"
+        ],
+        "enable_ws": false
+    },
+    "pairlists": [
+        {
+            "method": "StaticPairList"
+        }
+    ],
+    "telegram": {
+        "enabled": false,
+        "token": "",
+        "chat_id": ""
+    },
+    "api_server": {
+        "enabled": false,
+        "listen_ip_address": "127.0.0.1",
+        "listen_port": 8080,
+        "verbosity": "error",
+        "jwt_secret_key": "9572630c8cfb8537ae56924d5704ee7f432b722c398d05bc",
+        "CORS_origins": [],
+        "username": "freqtrader",
+        "password": "changeme",
+        "ws_token": "1c7604be3aae7993179622d757426e40"
+    },
+    "bot_name": "score4window-ichi-dryrun",
+    "initial_state": "running",
+    "force_entry_enable": false,
+    "internals": {
+        "process_throttle_secs": 5
+    },
+    "active_universe": {
+        "enabled": false,
+        "top_n": 1000000,
+        "refresh_minutes": 30,
+        "exit_when_dropped": true,
+        "reports_dir": "reports"
+    },
+    "score_scan": "off",
+    "amend_last_stake_amount": true,
+    "trading_mode": "spot",
+    "strategy": "Score4WindowIchiStrategy"
+}
